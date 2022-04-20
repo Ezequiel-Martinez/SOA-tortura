@@ -4,7 +4,7 @@
 #include <LiquidCrystal.h> //para el lcd
 
 //Defines
-#define DEBUG_MODE 0 //para hacer debug por consola
+#define DEBUG_MODE 1 //para hacer debug por consola
 #define NUM_ROWS_LCD 3 //cantidad de filas que usamos en el keypad
 #define NUM_COLS_LCD 3 //cantidad de columnas que usamos en el keypad
 #define NUM_ROWS_KEYPAD 3 //cantidad de filas que usamos en el keypad
@@ -15,7 +15,7 @@
 #define MAX_TIME_ELECTRIC_SHOCK 1000 //tiempo que quiero electrocutar al usuario en microsegundos
 #define KEYPAD_GAME_TIME_REDUCTION 500 //cantidad de tiempo que se va a restar a max_keypad_game_time cada vez que el usuario gana
 
-enum ShockIntensity { INTENSITY_LOW = 5, INTENSITY_MEDIUM = 10, INTENSITY_HIGH = 15, NONE };
+enum ShockIntensity { INTENSITY_LOW = 2, INTENSITY_MEDIUM = 4, INTENSITY_HIGH = 6, NONE };
 
 typedef struct{
 
@@ -28,12 +28,10 @@ typedef struct{
 t_timer buzzer_cooldown;
 t_timer lcd_clear_timer; //timer que uso para saber cuanto lleva el numero random en el lcd
 
-LiquidCrystal lcd(1,2,3,4,5,6); //los parametros son los pines a los cuales esta conectado el lcd
+LiquidCrystal lcd(9,2,3,4,5,7); //los parametros son los pines a los cuales esta conectado el lcd
 
 int button_pin;
-int rgb_led_pin_r;
-int rgb_led_pin_g;
-int rgb_led_pin_b;
+int LED;
 
 int print_on_lcd; //variable que indica si es necesario hacer un print en el lcd o no
 int n_key_pressed; //cantidad de keys que se presionaron en el keypad
@@ -79,14 +77,10 @@ void setup()
 
   pinMode(button_pin,INPUT);
   
-  //Led rgb
-  rgb_led_pin_r = 11;
-  rgb_led_pin_g = 9;
-  rgb_led_pin_b = 10;
+  //Led
+  LED = 10;
   
-  pinMode(rgb_led_pin_r,OUTPUT);
-  pinMode(rgb_led_pin_g,OUTPUT);
-  pinMode(rgb_led_pin_b,OUTPUT);  
+  pinMode(LED,OUTPUT);
   
   //Keypad
   print_on_lcd = 1;
@@ -103,7 +97,7 @@ void setup()
 
 void loop()
 {
-  
+
   if(print_on_lcd){
 	generate_random_number(random_number_buffer);    
   	print_string_on_lcd(random_number_buffer,0,3);
@@ -123,6 +117,7 @@ void button_game(void){
 
   buzzer_cooldown.finish_time = millis();
 
+  //espera el cooldown para hacer sonar el botón
   if(buzzer_cooldown.finish_time - buzzer_cooldown.start_time < BUZZER_COOLDOWN){
     return;
   }
@@ -143,7 +138,7 @@ void button_game(void){
     button_state = analogRead(button_pin);
 
     //El 1023 es por el valor maximo que retorna analogRead()
-    if(button_state == 1023){
+    if(button_state == 1023 ){
       
 #if DEBUG_MODE
       Serial.println("Boton apretado a tiempo");
@@ -272,9 +267,7 @@ void stop_electric_shock(void){
   Serial.println("Terminando choque electrico");
 #endif  		
 
-  analogWrite(rgb_led_pin_r,0);
-  analogWrite(rgb_led_pin_g,0);
-  analogWrite(rgb_led_pin_b,0);			
+  analogWrite(LED,0);		
 	
 }
 
@@ -288,9 +281,7 @@ void give_electric_shock(const ShockIntensity intensity){
   Serial.println("Choque electrico con intensidad baja");
 #endif  	
 
-		analogWrite(rgb_led_pin_r,0);
-		analogWrite(rgb_led_pin_g,255);
-		analogWrite(rgb_led_pin_b,0);
+		analogWrite(LED,70);
   	
   	break;
   	
@@ -300,9 +291,7 @@ void give_electric_shock(const ShockIntensity intensity){
   Serial.println("Choque electrico con intensidad media");
 #endif  	
   	
-		analogWrite(rgb_led_pin_r,255);
-		analogWrite(rgb_led_pin_g,255);
-		analogWrite(rgb_led_pin_b,0);
+		analogWrite(LED,150);
       	
   	break;
   	
@@ -312,9 +301,7 @@ void give_electric_shock(const ShockIntensity intensity){
   Serial.println("Choque electrico con intensidad alta");
 #endif  	
 
-		analogWrite(rgb_led_pin_r,255);
-		analogWrite(rgb_led_pin_g,0);
-		analogWrite(rgb_led_pin_b,0);	
+		analogWrite(LED,255);
   	
   	break;
   	
