@@ -1,18 +1,21 @@
 // C++ code
 // Includes
-#include <Keypad.h>			//para el keypad
-#include <LiquidCrystal.h>	//para el lcd
+#include <Keypad.h> //para el keypad
+#include <LiquidCrystal.h> //para el lcd
 
 //Defines
-//#define DEBUG_MODE					//para hacer debug por consola
-#define NUM_ROWS_LCD 3					//cantidad de filas que usamos en el keypad
-#define NUM_COLS_LCD 3					//cantidad de columnas que usamos en el keypad
-#define NUM_ROWS_KEYPAD 3				//cantidad de filas que usamos en el keypad
-#define NUM_COLS_KEYPAD 3				//cantidad de columnas que usamos en el keypad
-#define RANDOM_NUM_LENGTH 11			//cantidad de digitos que queremos que tenga el numero random ( contemplando el '\0')
-#define BUZZER_COOLDOWN 1000			//cantidad de tiempo minimo que debe pasar entre un button_game y otro ( es un cooldown ) medido en milisegundos
-#define MAX_BUTTON_PRESS_DELAY 10000 	//cantidad de tiempo maximo que tiene el usuario para presionar el boton luego de escuchar el sonido
-#define KEYPAD_GAME_TIME_REDUCTION 500 	//cantidad de tiempo que se va a restar a max_keypad_game_time cada vez que el usuario gana
+#define DEBUG_MODE 0 //para hacer debug por consola
+#define NUM_ROWS_LCD 3 //cantidad de filas que usamos en el keypad
+#define NUM_COLS_LCD 3 //cantidad de columnas que usamos en el keypad
+#define NUM_ROWS_KEYPAD 3 //cantidad de filas que usamos en el keypad
+#define NUM_COLS_KEYPAD 3 //cantidad de columnas que usamos en el keypad
+#define RANDOM_NUM_LENGTH 11 //cantidad de digitos que queremos que tenga el numero random ( contemplando el '\0')
+#define BUZZER_COOLDOWN 1000 //cantidad de tiempo minimo que debe pasar entre un button_game y otro ( es un cooldown ) medido en milisegundos
+#define MAX_BUTTON_PRESS_DELAY 1000 //cantidad de tiempo maximo que tiene el usuario para presionar el boton luego de escuchar el sonido en microsegundos
+#define MAX_TIME_ELECTRIC_SHOCK 1000 //tiempo que quiero electrocutar al usuario en microsegundos
+#define KEYPAD_GAME_TIME_REDUCTION 500 //cantidad de tiempo que se va a restar a max_keypad_game_time cada vez que el usuario gana
+
+enum ShockIntensity { INTENSITY_LOW = 5, INTENSITY_MEDIUM = 10, INTENSITY_HIGH = 15, NONE };
 
 typedef struct{
 
@@ -23,14 +26,19 @@ typedef struct{
 
 //Variables globales
 t_timer buzzer_cooldown;
-t_timer lcd_clear_timer;	//timer que uso para saber cuanto lleva el numero random en el lcd
+t_timer lcd_clear_timer; //timer que uso para saber cuanto lleva el numero random en el lcd
 
-LiquidCrystal lcd(1,2,3,4,5,6);	//los parametros son los pines a los cuales esta conectado el lcd
+LiquidCrystal lcd(1,2,3,4,5,6); //los parametros son los pines a los cuales esta conectado el lcd
 
 int button_pin;
-int print_on_lcd;	//variable que indica si es necesario hacer un print en el lcd o no
-int n_key_pressed;	//cantidad de keys que se presionaron en el keypad
-int max_keypad_game_time;	//cantidad maxima de tiempo que va a tener el numero random para estar en el lcd en milisegundos ( lo pongo como variable para poder modificarlo )
+int rgb_led_pin_r;
+int rgb_led_pin_g;
+int rgb_led_pin_b;
+
+int print_on_lcd; //variable que indica si es necesario hacer un print en el lcd o no
+int n_key_pressed; //cantidad de keys que se presionaron en el keypad
+int number_of_attempts; //cantidad de intentos que lleva el usuario con el keypad_game
+int max_keypad_game_time; //cantidad maxima de tiempo que va a tener el numero random para estar en el lcd en milisegundos ( lo pongo como variable para poder modificarlo )
 char random_number_buffer[RANDOM_NUM_LENGTH];
 
 //mapa de teclas que vamos a usar del keypad
@@ -40,8 +48,8 @@ char key_map[NUM_ROWS_KEYPAD][NUM_COLS_KEYPAD] = {
   {'7','8','9'}
 };
 
-byte row_pins[NUM_ROWS_KEYPAD] = {A4,A3,A2}; 	//pines a los cuales conectamos las filas del keypad
-byte col_pins[NUM_COLS_KEYPAD] = {13,12,11};	//pines a los cuales conectamos las columnas del keypad
+byte row_pins[NUM_ROWS_KEYPAD] = {A4,A3,A2}; //pines a los cuales conectamos las filas del keypad
+byte col_pins[NUM_COLS_KEYPAD] = {13,12,8}; //pines a los cuales conectamos las columnas del keypad
 
 Keypad keypad = Keypad(makeKeymap(key_map),row_pins,col_pins,NUM_ROWS_KEYPAD,NUM_COLS_KEYPAD);
 
@@ -49,15 +57,18 @@ Keypad keypad = Keypad(makeKeymap(key_map),row_pins,col_pins,NUM_ROWS_KEYPAD,NUM
 void button_game(void);
 void keypad_game(void);
 void generate_random_number(char *buffer);
+void stop_electric_shock(void);
+void give_electric_shock(const ShockIntensity intensity);
 void print_string_on_lcd(const char *buffer, int row, int column);
 
 void setup()
 {
 
-#ifdef DEBUG_MODE
+#if DEBUG_MODE
   	Serial.begin(9600);
 #endif
   
+  number_of_attempts = 0;
   randomSeed(analogRead(A0));
   
   //Lcd
@@ -65,12 +76,22 @@ void setup()
  
   //Boton
   button_pin = A5;
+
   pinMode(button_pin,INPUT);
+  
+  //Led rgb
+  rgb_led_pin_r = 11;
+  rgb_led_pin_g = 9;
+  rgb_led_pin_b = 10;
+  
+  pinMode(rgb_led_pin_r,OUTPUT);
+  pinMode(rgb_led_pin_g,OUTPUT);
+  pinMode(rgb_led_pin_b,OUTPUT);  
   
   //Keypad
   print_on_lcd = 1;
   n_key_pressed = 0;
-  max_keypad_game_time = 1500;
+  max_keypad_game_time = 1000;
   pinMode(A2,INPUT);
   pinMode(A3,INPUT);
   pinMode(A4,INPUT);
@@ -107,12 +128,12 @@ void button_game(void){
   }
 
   buzzer_cooldown.start_time = buzzer_cooldown.finish_time;
-  random_number = random(0,100);	//genero un numero entre 0-99
+  random_number = random(0,100); //genero un numero entre 0-99
 
   //Para tener un 50-50 de chances, pregunto si el numero es impar, si lo es reproduzco el sonido y reviso el boton
   if(random_number & 1){
     
-#ifdef DEBUG_MODE
+#if DEBUG_MODE
     Serial.println("Apreta el boton");
 #endif
     
@@ -124,16 +145,20 @@ void button_game(void){
     //El 1023 es por el valor maximo que retorna analogRead()
     if(button_state == 1023){
       
-#ifdef DEBUG_MODE
+#if DEBUG_MODE
       Serial.println("Boton apretado a tiempo");
 #endif
       
     }
     else{
       
-#ifdef DEBUG_MODE
+#if DEBUG_MODE
       Serial.println("Demasiado lento apretando el boton");
 #endif
+
+      give_electric_shock(INTENSITY_MEDIUM);
+      delayMicroseconds(MAX_TIME_ELECTRIC_SHOCK);
+      stop_electric_shock();
       
     }
 
@@ -152,16 +177,16 @@ void keypad_game(const char *random_number_buffer){
   	return;
   }
   
-#ifdef DEBUG_MODE
-    Serial.print("Tecla presionada");
-    Serial.print(key);
+#if DEBUG_MODE
+    Serial.print("Tecla presionada: ");
+    Serial.println(key);
 #endif    
   
   lcd_clear_timer.finish_time = millis();
   
   if(lcd_clear_timer.finish_time - lcd_clear_timer.start_time > max_keypad_game_time){
 
-#ifdef DEBUG_MODE
+#if DEBUG_MODE
     Serial.println("Se alcanzo el tiempo maximo para mostrar el numero en el lcd");
 #endif    
 
@@ -172,16 +197,39 @@ void keypad_game(const char *random_number_buffer){
     
   if(key != *(random_number_buffer + n_key_pressed)){
     
-#ifdef DEBUG_MODE
+#if DEBUG_MODE
     Serial.print("El numero ingresado es erroneo. Se esperaba: ");
     Serial.print(*(random_number_buffer + n_key_pressed));
     Serial.print(" , y se recibio: ");
-    Serial.print(key);
+    Serial.println(key);
 #endif    
     
+    ShockIntensity intensity;
+    
     print_on_lcd = 1; //si pierdo necesito indicar que se tiene que mostrar otro numero en el lcd
-    n_key_pressed = 0;
-    //encender el led indicando que se electrocuto    
+    n_key_pressed = 0; //reinicio la cantidad de teclas presionadas
+    number_of_attempts++; //sumo uno a la cantidad de intentos que lleva el usuario en el keypad_game
+    intensity = INTENSITY_LOW; //por defecto digo que la intencidad del choque electrico es baja
+    
+    if(number_of_attempts > INTENSITY_HIGH){
+
+#if DEBUG_MODE
+		Serial.println("Cambiando a intensidad alta");
+#endif    
+
+    	intensity = INTENSITY_HIGH;
+    }
+    else if( number_of_attempts > INTENSITY_MEDIUM){
+    
+#if DEBUG_MODE
+		Serial.println("Cambiando a intensidad media");
+#endif    
+    	intensity = INTENSITY_MEDIUM;
+    }
+    
+    give_electric_shock(intensity); //Enciendo el led indicando que se electrocuto con la intensidad correspondiente
+    delayMicroseconds(MAX_TIME_ELECTRIC_SHOCK);
+    stop_electric_shock();
     return;
     
   }
@@ -190,7 +238,7 @@ void keypad_game(const char *random_number_buffer){
   
   if(n_key_pressed == RANDOM_NUM_LENGTH - 1){
     
-#ifdef DEBUG_MODE
+#if DEBUG_MODE
     Serial.println("El numero ingresado es correcto");
 #endif        
     
@@ -206,16 +254,75 @@ void keypad_game(const char *random_number_buffer){
 void generate_random_number(char *buffer){
 
   for(int i = 0; i < RANDOM_NUM_LENGTH; i++){
-  	*(buffer + i) = random(49,58);	//genero un numero entre 1-9
+  	*(buffer + i) = random(49,58); //genero un numero entre 1-9
   }
   
   *(buffer + RANDOM_NUM_LENGTH - 1) = '\0';
 
-#ifdef DEBUG_MODE
-  Serial.print("Numero random generado:");
+#if DEBUG_MODE
+  Serial.print("Numero random generado: ");
   Serial.println(buffer);
 #endif
   
+}
+
+void stop_electric_shock(void){
+
+#if DEBUG_MODE
+  Serial.println("Terminando choque electrico");
+#endif  		
+
+  analogWrite(rgb_led_pin_r,0);
+  analogWrite(rgb_led_pin_g,0);
+  analogWrite(rgb_led_pin_b,0);			
+	
+}
+
+void give_electric_shock(const ShockIntensity intensity){
+	
+  switch(intensity){
+  
+  	case INTENSITY_LOW:
+
+#if DEBUG_MODE
+  Serial.println("Choque electrico con intensidad baja");
+#endif  	
+
+		analogWrite(rgb_led_pin_r,0);
+		analogWrite(rgb_led_pin_g,255);
+		analogWrite(rgb_led_pin_b,0);
+  	
+  	break;
+  	
+  	case INTENSITY_MEDIUM:
+
+#if DEBUG_MODE
+  Serial.println("Choque electrico con intensidad media");
+#endif  	
+  	
+		analogWrite(rgb_led_pin_r,255);
+		analogWrite(rgb_led_pin_g,255);
+		analogWrite(rgb_led_pin_b,0);
+      	
+  	break;
+  	
+  	case INTENSITY_HIGH:
+
+#if DEBUG_MODE
+  Serial.println("Choque electrico con intensidad alta");
+#endif  	
+
+		analogWrite(rgb_led_pin_r,255);
+		analogWrite(rgb_led_pin_g,0);
+		analogWrite(rgb_led_pin_b,0);	
+  	
+  	break;
+  	
+  	default:
+  	break;
+  	
+  }	
+	
 }
 
 //Funcion que se encarga de mostrar en el lcd el contenido del buffer que recibe por parametro, row y column son para posicionar el cursor del lcd
@@ -226,8 +333,8 @@ void print_string_on_lcd(const char *buffer, int row, int column){
   lcd.print(buffer);
   print_on_lcd = 0;
   
-#ifdef DEBUG_MODE
-  Serial.print("Buffer a imprimir en el lcd:");
+#if DEBUG_MODE
+  Serial.print("Buffer a imprimir en el lcd: ");
   Serial.println(buffer);
 #endif  
   
