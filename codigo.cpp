@@ -16,7 +16,13 @@
 #define MAX_TIME_ELECTRIC_SHOCK 1000 //tiempo que quiero electrocutar al usuario en microsegundos
 #define KEYPAD_GAME_TIME_REDUCTION 500 //cantidad de tiempo que se va a restar a max_keypad_game_time cada vez que el usuario gana
 
+// Comandos para comunicarse por medio del Serial Monitor
+// "K": Solamente se podrá usar la pantalla LCD junto con el keypad
+// "B": Solamente se podrá usar el buzzer con el botón
+// "N": Vuelve al estado normal, se utilizan tanto el keypad como el botón
+
 enum ShockIntensity { INTENSITY_LOW = 2, INTENSITY_MEDIUM = 4, INTENSITY_HIGH = 6, NONE };
+enum SerialMonitorCommands {KEYPAD = 'K', BUTTON = 'B', NORMAL = 'N'};
 
 typedef struct{
 
@@ -29,14 +35,15 @@ typedef struct{
 t_timer buzzer_cooldown;
 t_timer lcd_clear_timer; //timer que uso para saber cuanto lleva el numero random en el lcd
 ShockIntensity intensity;
-
+Servo servo_motor;
 LiquidCrystal lcd(9,2,3,4,5,7); //los parametros son los pines a los cuales esta conectado el lcd
 
+int incoming_byte; // Es el caracter en número ASCII que nos pasan por Serial Monitor
 int buzzer_pin;
 int button_pin;
 int LED;
-
-int print_on_lcd; //variable que indica si es necesario hacer un print en el lcd o no
+int servo_motor_pin;
+bool print_on_lcd; //variable que indica si es necesario hacer un print en el lcd o no
 int n_key_pressed; //cantidad de keys que se presionaron en el keypad
 int number_of_attempts; //cantidad de intentos que lleva el usuario con el keypad_game
 int max_keypad_game_time; //cantidad maxima de tiempo que va a tener el numero random para estar en el lcd en milisegundos ( lo pongo como variable para poder modificarlo )
@@ -65,10 +72,12 @@ void print_string_on_lcd(const char *buffer, int row, int column);
 void setup()
 {
 
-#if DEBUG_MODE
-  	Serial.begin(9600);
-#endif
+  #ifdef DEBUG_MODE
+    Serial.begin(9600);
+  #endif
   
+  // Por defecto el byte inicial es el que permite usar tanto el botón como el keypad
+  incoming_byte = SerialMonitorCommands::NORMAL;
   number_of_attempts = 0;
   randomSeed(analogRead(A0));
   
@@ -94,7 +103,7 @@ void setup()
   pinMode(LED,OUTPUT);
   
   //Keypad
-  print_on_lcd = 1;
+  print_on_lcd = true;
   n_key_pressed = 0;
   max_keypad_game_time = 1000;
   pinMode(A2,INPUT);
@@ -112,14 +121,67 @@ void setup()
 void loop()
 {
 
-  if(print_on_lcd){
-	generate_random_number(random_number_buffer);    
+  // Cuando hay algo para leer desde Serial Monitor
+  if (Serial.available() > 0) {
+
+    // Lo lee en ascii, si ingreso la letra "a", entonces se recibe el número 97
+    incoming_byte = Serial.read();
+
+    #ifdef DEBUG_MODE
+      char incoming_char = (char) incoming_byte;
+      Serial.print("Se recibio por Serial Monitor el caracter: ");
+      Serial.println(incoming_char);
+    #endif
+
+    switch (incoming_byte) {
+
+      // Paso por Serial Monitor para usar solamente el buzzer y el botón
+      case SerialMonitorCommands::BUTTON:
+        lcd.clear();
+        lcd.print("USANDO BUZZER");
+        #ifdef DEBUG_MODE
+          Serial.println("Activado unicamente buzzer y boton");
+        #endif
+        break;
+
+      // Paso por Serial Monitor para usar solamente el Keypad
+      case SerialMonitorCommands::KEYPAD:
+        lcd.clear();
+        print_on_lcd = true;
+        #ifdef DEBUG_MODE
+          Serial.println("Activado unicamente keypad");
+        #endif
+        break;
+
+      // Paso por Serial Monitor el funcionamiento normal (buzzer, boton y keypad)
+      case SerialMonitorCommands::NORMAL:
+        lcd.clear();
+        print_on_lcd = true;
+        #ifdef DEBUG_MODE
+          Serial.println("Activado buzzer, boton y keypad");
+        #endif
+        break;
+
+      default:
+        break;
+    }
+  }
+
+  // Si está disponible para imprimir por LCD y no le pasé el comando del botón
+  if(print_on_lcd && incoming_byte != SerialMonitorCommands::BUTTON){
+	  generate_random_number(random_number_buffer);    
   	print_string_on_lcd(random_number_buffer,0,3);
   	lcd_clear_timer.start_time = millis();
   }
+
+  if (incoming_byte == SerialMonitorCommands::BUTTON || incoming_byte == SerialMonitorCommands::NORMAL) {
+    button_game(); 
+  }
   
-  button_game(); 
-  keypad_game(random_number_buffer);
+  if (incoming_byte == SerialMonitorCommands::KEYPAD || incoming_byte == SerialMonitorCommands::NORMAL) {
+    keypad_game(random_number_buffer);
+  }
+  
   
 }
 
@@ -142,9 +204,9 @@ void button_game(void){
   //Para tener un 50-50 de chances, pregunto si el numero es impar, si lo es reproduzco el sonido y reviso el boton
   if(random_number & 1){
     
-#if DEBUG_MODE
+  #ifdef DEBUG_MODE
     Serial.println("Apreta el boton");
-#endif
+  #endif
 
 	tone(buzzer_pin,800);	
 	    
@@ -158,16 +220,16 @@ void button_game(void){
     //El 1023 es por el valor maximo que retorna analogRead()
     if(button_state == 1023 ){
       
-#if DEBUG_MODE
-      Serial.println("Boton apretado a tiempo");
-#endif
+      #ifdef DEBUG_MODE
+        Serial.println("Boton apretado a tiempo");
+      #endif
       
     }
     else{
       
-#if DEBUG_MODE
-      Serial.println("Demasiado lento apretando el boton");
-#endif
+      #ifdef DEBUG_MODE
+        Serial.println("Demasiado lento apretando el boton");
+      #endif
 
       give_electric_shock();
       delayMicroseconds(MAX_TIME_ELECTRIC_SHOCK);
@@ -190,18 +252,18 @@ void keypad_game(const char *random_number_buffer){
   	return;
   }
   
-#if DEBUG_MODE
+  #ifdef DEBUG_MODE
     Serial.print("Tecla presionada: ");
     Serial.println(key);
-#endif    
+  #endif    
   
   lcd_clear_timer.finish_time = millis();
   
   if(lcd_clear_timer.finish_time - lcd_clear_timer.start_time > max_keypad_game_time){
 
-#if DEBUG_MODE
-    Serial.println("Se alcanzo el tiempo maximo para mostrar el numero en el lcd");
-#endif    
+    #ifdef DEBUG_MODE
+      Serial.println("Se alcanzo el tiempo maximo para mostrar el numero en el lcd");
+    #endif    
 
   	lcd.clear();
   	lcd_clear_timer.start_time = lcd_clear_timer.finish_time;
@@ -210,31 +272,31 @@ void keypad_game(const char *random_number_buffer){
     
   if(key != *(random_number_buffer + n_key_pressed)){
     
-#if DEBUG_MODE
-    Serial.print("El numero ingresado es erroneo. Se esperaba: ");
-    Serial.print(*(random_number_buffer + n_key_pressed));
-    Serial.print(" , y se recibio: ");
-    Serial.println(key);
-#endif    
+    #ifdef DEBUG_MODE
+      Serial.print("El numero ingresado es erroneo. Se esperaba: ");
+      Serial.print(*(random_number_buffer + n_key_pressed));
+      Serial.print(" , y se recibio: ");
+      Serial.println(key);
+    #endif    
     
-    print_on_lcd = 1; //si pierdo necesito indicar que se tiene que mostrar otro numero en el lcd
+    print_on_lcd = true; //si pierdo necesito indicar que se tiene que mostrar otro numero en el lcd
     n_key_pressed = 0; //reinicio la cantidad de teclas presionadas
     number_of_attempts++; //sumo uno a la cantidad de intentos que lleva el usuario en el keypad_game
     
     if(number_of_attempts > INTENSITY_MEDIUM){
 
-#if DEBUG_MODE
-		Serial.println("Cambiando a intensidad alta");
-#endif    
+      #ifdef DEBUG_MODE
+        Serial.println("Cambiando a intensidad alta");
+      #endif    
 
     	intensity = INTENSITY_HIGH;
     	
     }
     else if( number_of_attempts > INTENSITY_LOW){
     
-#if DEBUG_MODE
-		Serial.println("Cambiando a intensidad media");
-#endif    
+      #ifdef DEBUG_MODE
+        Serial.println("Cambiando a intensidad media");
+      #endif    
 
     	intensity = INTENSITY_MEDIUM;
     	
@@ -251,11 +313,11 @@ void keypad_game(const char *random_number_buffer){
   
   if(n_key_pressed == RANDOM_NUM_LENGTH - 1){
     
-#if DEBUG_MODE
-    Serial.println("El numero ingresado es correcto");
-#endif        
+    #ifdef DEBUG_MODE
+      Serial.println("El numero ingresado es correcto");
+    #endif        
     
-    print_on_lcd = 1; //si gano necesito indicar que se tiene que mostrar otro numero en el lcd
+    print_on_lcd = true; //si gano necesito indicar que se tiene que mostrar otro numero en el lcd
     max_keypad_game_time -= KEYPAD_GAME_TIME_REDUCTION; //el siguiente numero va a tener menos tiempo en el lcd
     //ver que hacer cuando ingresa el numero correctamente
     
@@ -272,18 +334,18 @@ void generate_random_number(char *buffer){
   
   *(buffer + RANDOM_NUM_LENGTH - 1) = '\0';
 
-#if DEBUG_MODE
-  Serial.print("Numero random generado: ");
-  Serial.println(buffer);
-#endif
+  #ifdef DEBUG_MODE
+    Serial.print("Numero random generado: ");
+    Serial.println(buffer);
+  #endif
   
 }
 
 void stop_electric_shock(void){
 
-#if DEBUG_MODE
-  Serial.println("Terminando choque electrico");
-#endif  		
+  #ifdef DEBUG_MODE
+    Serial.println("Terminando choque electrico");
+  #endif  		
 
   analogWrite(LED,0);		
 	
@@ -295,9 +357,9 @@ void give_electric_shock(void){
   
   	case INTENSITY_LOW:
 
-#if DEBUG_MODE
-  Serial.println("Choque electrico con intensidad baja");
-#endif  	
+    #ifdef DEBUG_MODE
+      Serial.println("Choque electrico con intensidad baja");
+    #endif  	
 
 		analogWrite(LED,70);
   	
@@ -305,9 +367,9 @@ void give_electric_shock(void){
   	
   	case INTENSITY_MEDIUM:
 
-#if DEBUG_MODE
-  Serial.println("Choque electrico con intensidad media");
-#endif  	
+    #ifdef DEBUG_MODE
+      Serial.println("Choque electrico con intensidad media");
+    #endif  	
   	
 		analogWrite(LED,150);
       	
@@ -315,9 +377,9 @@ void give_electric_shock(void){
   	
   	case INTENSITY_HIGH:
 
-#if DEBUG_MODE
-  Serial.println("Choque electrico con intensidad alta");
-#endif  	
+    #ifdef DEBUG_MODE
+      Serial.println("Choque electrico con intensidad alta");
+    #endif  	
 
 		analogWrite(LED,255);
   	
@@ -336,11 +398,11 @@ void print_string_on_lcd(const char *buffer, int row, int column){
   lcd.clear(); //limpio cualquier cosa que tenga el lcd
   lcd.setCursor(row,column); //para que el numero quede centrado
   lcd.print(buffer);
-  print_on_lcd = 0;
+  print_on_lcd = false;
   
-#if DEBUG_MODE
-  Serial.print("Buffer a imprimir en el lcd: ");
-  Serial.println(buffer);
-#endif  
+  #ifdef DEBUG_MODE
+    Serial.print("Buffer a imprimir en el lcd: ");
+    Serial.println(buffer);
+  #endif  
   
 }
