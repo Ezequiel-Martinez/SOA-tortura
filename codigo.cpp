@@ -1,5 +1,6 @@
 // C++ code
 // Includes
+#include <Servo.h> //para el servo motor
 #include <Keypad.h> //para el keypad
 #include <LiquidCrystal.h> //para el lcd
 
@@ -27,9 +28,11 @@ typedef struct{
 //Variables globales
 t_timer buzzer_cooldown;
 t_timer lcd_clear_timer; //timer que uso para saber cuanto lleva el numero random en el lcd
+ShockIntensity intensity;
 
 LiquidCrystal lcd(9,2,3,4,5,7); //los parametros son los pines a los cuales esta conectado el lcd
 
+int buzzer_pin;
 int button_pin;
 int LED;
 
@@ -56,7 +59,7 @@ void button_game(void);
 void keypad_game(void);
 void generate_random_number(char *buffer);
 void stop_electric_shock(void);
-void give_electric_shock(const ShockIntensity intensity);
+void give_electric_shock(void);
 void print_string_on_lcd(const char *buffer, int row, int column);
 
 void setup()
@@ -71,9 +74,17 @@ void setup()
   
   //Lcd
   lcd.begin(NUM_ROWS_LCD,NUM_COLS_LCD);
+  
+  //Buzzer
+  buzzer_pin = A1;
  
   //Boton
   button_pin = A5;
+  
+  //Servo
+  servo_motor_pin = 6;
+  servo_motor.attach(servo_motor_pin);
+  servo_motor.write(90); //TODO: eliminar, es solo un test para ver si gira correctamente
 
   pinMode(button_pin,INPUT);
   
@@ -92,6 +103,9 @@ void setup()
   
   //Timer
   buzzer_cooldown.start_time = millis();
+  
+  //Shock intensity
+  intensity = INTENSITY_LOW; //por defecto arrancamos con una intensidad baja
   
 }
 
@@ -131,11 +145,15 @@ void button_game(void){
 #if DEBUG_MODE
     Serial.println("Apreta el boton");
 #endif
-    
-    //aca hay que poner un delay, porque sino no hay manera de darle tiempo al usuario a presionar el boton
+
+	tone(buzzer_pin,800);	
+	    
+    //aca hay que poner un delay, porque sino no hay manera de darle tiempo al usuario a presionar el boton ?
     //test
     delayMicroseconds(MAX_BUTTON_PRESS_DELAY);
     button_state = analogRead(button_pin);
+
+	noTone(buzzer_pin);
 
     //El 1023 es por el valor maximo que retorna analogRead()
     if(button_state == 1023 ){
@@ -151,7 +169,7 @@ void button_game(void){
       Serial.println("Demasiado lento apretando el boton");
 #endif
 
-      give_electric_shock(INTENSITY_MEDIUM);
+      give_electric_shock();
       delayMicroseconds(MAX_TIME_ELECTRIC_SHOCK);
       stop_electric_shock();
       
@@ -199,30 +217,30 @@ void keypad_game(const char *random_number_buffer){
     Serial.println(key);
 #endif    
     
-    ShockIntensity intensity;
-    
     print_on_lcd = 1; //si pierdo necesito indicar que se tiene que mostrar otro numero en el lcd
     n_key_pressed = 0; //reinicio la cantidad de teclas presionadas
     number_of_attempts++; //sumo uno a la cantidad de intentos que lleva el usuario en el keypad_game
-    intensity = INTENSITY_LOW; //por defecto digo que la intencidad del choque electrico es baja
     
-    if(number_of_attempts > INTENSITY_HIGH){
+    if(number_of_attempts > INTENSITY_MEDIUM){
 
 #if DEBUG_MODE
 		Serial.println("Cambiando a intensidad alta");
 #endif    
 
     	intensity = INTENSITY_HIGH;
+    	
     }
-    else if( number_of_attempts > INTENSITY_MEDIUM){
+    else if( number_of_attempts > INTENSITY_LOW){
     
 #if DEBUG_MODE
 		Serial.println("Cambiando a intensidad media");
 #endif    
+
     	intensity = INTENSITY_MEDIUM;
+    	
     }
     
-    give_electric_shock(intensity); //Enciendo el led indicando que se electrocuto con la intensidad correspondiente
+    give_electric_shock(); //Enciendo el led indicando que se electrocuto con la intensidad correspondiente
     delayMicroseconds(MAX_TIME_ELECTRIC_SHOCK);
     stop_electric_shock();
     return;
@@ -271,7 +289,7 @@ void stop_electric_shock(void){
 	
 }
 
-void give_electric_shock(const ShockIntensity intensity){
+void give_electric_shock(void){
 	
   switch(intensity){
   
