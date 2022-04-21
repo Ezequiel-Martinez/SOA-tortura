@@ -17,9 +17,9 @@
 #define KEYPAD_GAME_TIME_REDUCTION 500 //cantidad de tiempo que se va a restar a max_keypad_game_time cada vez que el usuario gana
 
 // Comandos para comunicarse por medio del Serial Monitor
-// "K": Solamente se podrá usar la pantalla LCD junto con el keypad
-// "B": Solamente se podrá usar el buzzer con el botón
-// "N": Vuelve al estado normal, se utilizan tanto el keypad como el botón
+// 'K': Solamente se podrá usar la pantalla LCD junto con el keypad
+// 'B': Solamente se podrá usar el buzzer con el botón
+// 'N': Vuelve al estado normal, se utilizan tanto el keypad como el botón
 
 enum ShockIntensity { INTENSITY_LOW = 2, INTENSITY_MEDIUM = 4, INTENSITY_HIGH = 6, NONE };
 enum SerialMonitorCommands {KEYPAD = 'K', BUTTON = 'B', NORMAL = 'N'};
