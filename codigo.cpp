@@ -60,6 +60,7 @@ int n_key_pressed; //cantidad de keys que se presionaron en el keypad
 int number_of_attempts; //cantidad de intentos que lleva el usuario con el keypad_game
 int max_keypad_game_time; //cantidad maxima de tiempo que va a tener el numero random para estar en el lcd en milisegundos ( lo pongo como variable para poder modificarlo )
 
+bool playing; //indica si el usuario esta jugando a alguno de los modos disponibles
 bool electrocuting; //para indicar si se esta electrocutando al usuario o no
 bool sound_playing; //para indicar si el buzzer esta reproduciendo un sonido o no 
 bool print_sensor_message;
@@ -82,6 +83,7 @@ Keypad keypad = Keypad(makeKeymap(key_map),row_pins,col_pins,NUM_ROWS_KEYPAD,NUM
 //Prototipos
 void button_game(void);
 void keypad_game(void);
+void clear_serial(void);
 void init_variables(void);
 void servo_motor_game(void);
 void stop_electric_shock(void);
@@ -118,9 +120,9 @@ void setup()
   //Sensor
   sensor_pin = A3;
   pinMode(sensor_pin,INPUT);
+  print_sensor_message = true; //Dejar esto aca
   
   //Keypad
-  n_key_pressed = 0;
   max_keypad_game_time = 1000;
   pinMode(A0,INPUT); //pin que usamos para declarar la variable keypad
   pinMode(A1,INPUT); //pin que usamos para declarar la variable keypad
@@ -136,6 +138,8 @@ void loop()
   
   //pregunto si el usuario no esta presionando el sensor
   if(analogRead(sensor_pin) < MIN_SENSOR_PRESSURE){
+
+	clear_serial();
 
     if(print_sensor_message){
     
@@ -154,7 +158,7 @@ void loop()
   else{
  
     // Cuando hay algo para leer desde Serial Monitor
-    if(Serial.available() > 0){
+    if(!playing && Serial.available() > 0){
 
       incoming_byte = Serial.read(); // Lo lee en ascii, si ingreso la letra "a", entonces se recibe el número 97
 
@@ -168,6 +172,7 @@ void loop()
         // Paso por Serial Monitor para usar solamente el buzzer y el boton
         case SerialMonitorCommands::BUTTON:
         
+        playing = true;
         print_string_on_lcd("Usando buzzer",0,0);
         
 #if DEBUG_MODE
@@ -179,6 +184,7 @@ void loop()
         // Paso por Serial Monitor para usar solamente el Keypad
         case SerialMonitorCommands::KEYPAD:
       
+        playing = true;      
 		generate_random_number(random_number_buffer);
 		print_string_on_lcd(random_number_buffer,0,3);
 		lcd_clear_timer.start_time = millis();
@@ -192,6 +198,7 @@ void loop()
       	// Paso por Serial Monitor el funcionamiento normal (buzzer, boton y keypad)
         case SerialMonitorCommands::NORMAL:
         
+        playing = true;        
 		generate_random_number(random_number_buffer);
 		print_string_on_lcd(random_number_buffer,0,3);
 		lcd_clear_timer.start_time = millis();
@@ -229,52 +236,68 @@ void loop()
     
     }
     
-    switch(incoming_byte){
+    if(playing){
     
-      case SerialMonitorCommands::NORMAL:
-      
-      button_game();
-      keypad_game();
-      servo_motor_game();
-      
-      break;
+      switch(incoming_byte){
     
-      case SerialMonitorCommands::KEYPAD:
+        case SerialMonitorCommands::NORMAL:
       
-      keypad_game();
-      servo_motor_game();
+        button_game();
+        keypad_game();
+        servo_motor_game();
       
-      break;
+        break;
     
-      case SerialMonitorCommands::BUTTON:
+        case SerialMonitorCommands::KEYPAD:
       
-      button_game();
+        keypad_game();
+        servo_motor_game();
       
-      break;
+        break;
     
-      case SerialMonitorCommands::NONE:
-      break;
+        case SerialMonitorCommands::BUTTON:
+      
+        button_game();
+      
+        break;
     
-      default:
-      break;
+        case SerialMonitorCommands::NONE:
+        break;
+    
+        default:
+        break;
     
     }
+    
+    }
+    
    
   }
 
 }
 
+void clear_serial(void){
+  
+  if(Serial.available() > 0){
+    
+    int value = Serial.read();
+    
+  }
+	
+}
+
 void init_variables(void){
 
   //TODO: deberia inicializar los timer aca tambien ??
+  n_key_pressed = 0;
   button_points = 0;
   keypad_points = 0;
   number_of_attempts = 0;
   button_points_to_win = 3;
   keypad_points_to_win = 5;
+  playing = false;
   electrocuting = false;
   sound_playing = false;
-  print_sensor_message = true;
   print_game_mode_message = true;  
   intensity = ShockIntensity::INTENSITY_LOW; //por defecto arrancamos con una intensidad baja
   incoming_byte = SerialMonitorCommands::NONE; //por defecto arranco el juego si un game mode
@@ -346,6 +369,9 @@ void button_game(void){
 #if DEBUG_MODE
             Serial.println("Ganaste el juego del boton");
 #endif		    
+
+		    init_variables();
+		    return;
 		    
 		  }
 
@@ -450,11 +476,16 @@ void keypad_game(void){
     Serial.println("El numero ingresado es correcto");
 #endif        
 
+    keypad_points++;
+    
 	if(keypad_points == keypad_points_to_win){
-	
+	  
 #if DEBUG_MODE
 	  Serial.println("Ganaste el juego del keypad");
 #endif
+
+	  init_variables();
+	  return;
 
 	}
 
