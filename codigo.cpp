@@ -5,14 +5,15 @@
 #include <LiquidCrystal.h> //para el lcd
 
 //Defines
-#define DEBUG_MODE 0 //para hacer debug por consola
+#define DEBUG_MODE 1 //para hacer debug por consola
 #define NUM_ROWS_LCD 3 //cantidad de filas que usamos en el keypad
 #define NUM_COLS_LCD 3 //cantidad de columnas que usamos en el keypad
 #define NUM_ROWS_KEYPAD 3 //cantidad de filas que usamos en el keypad
 #define NUM_COLS_KEYPAD 3 //cantidad de columnas que usamos en el keypad
 #define RANDOM_NUM_LENGTH 11 //cantidad de digitos que queremos que tenga el numero random ( contemplando el '\0')
 #define MAX_BUZZER_TIMER 1000 //cantidad de tiempo minimo que debe pasar entre un button_game y otro ( es un cooldown ) medido en milisegundos
-#define MAX_TIME_SERVO 2000// tiempo para que se evalue si el servo gira o no
+#define MAX_TIME_SERVO 1// tiempo para que se evalue si el servo gira o no
+#define MIN_TIME_SERVO 50// tiempo para que se evalue si el servo gira o no
 #define MAX_BUTTON_PRESS_DELAY 400 //cantidad de tiempo maximo que tiene el usuario para presionar el boton luego de escuchar el sonido en microsegundos
 #define MAX_TIME_ELECTRIC_SHOCK 100 //tiempo que quiero electrocutar al usuario en microsegundos
 #define KEYPAD_GAME_TIME_REDUCTION 500 //cantidad de tiempo que se va a restar a max_keypad_game_time cada vez que el usuario gana
@@ -48,10 +49,12 @@ int buzzer_pin;
 int button_pin;
 int servo_motor_pin;
 
+int speed;
 int points; //cantidad de aciertos
 int points_to_win;
 int servo_degrees;
 int incoming_byte; // Es el caracter en número ASCII que nos pasan por Serial Monitor
+bool positive;
 bool print_on_lcd; //variable que indica si es necesario hacer un print en el lcd o no
 bool electrocuting; //para indicar si se esta electrocutando al usuario o no
 bool sound_playing; //para indicar si el buzzer esta reproduciendo un sonido o no 
@@ -89,8 +92,10 @@ void setup()
 #endif
   
   //General
+  speed = MAX_TIME_SERVO;
   points = 0;
   points_to_win = 3;
+  positive = true;
   print_on_lcd = true;
   electrocuting = false;
   intensity = ShockIntensity::INTENSITY_LOW; //por defecto arrancamos con una intensidad baja
@@ -109,7 +114,7 @@ void setup()
   pinMode(button_pin,INPUT);
   
   //Servo
-  servo_degrees = 180;
+  servo_degrees = 0;
   servo_motor_pin = 10;
   servo_motor.attach(servo_motor_pin, 500, 2500);
   
@@ -200,7 +205,7 @@ void loop()
   	
   }
 
-  if(incoming_byte == SerialMonitorCommands::BUTTON || incoming_byte == SerialMonitorCommands::NORMAL){
+  if((points != points_to_win)&&(incoming_byte == SerialMonitorCommands::BUTTON || incoming_byte == SerialMonitorCommands::NORMAL)){
     button_game(); 
   }
   
@@ -263,7 +268,7 @@ void button_game(void){
       	sound_playing = false;
       	
   	    //El 1023 es por el valor maximo que retorna analogRead()
-	    if(button_state == 1023 ){
+	    if(button_state == HIGH ){
 	    
 #if DEBUG_MODE
   	      Serial.println("Boton apretado a tiempo");
@@ -389,21 +394,32 @@ void servo_motor_game(void){
 
   servo_timer.finish_time = millis();
   
-  if((servo_timer.finish_time - servo_timer.start_time) >= MAX_TIME_SERVO){
+  if((servo_timer.finish_time - servo_timer.start_time) >= speed){
   	
   	servo_timer.start_time = servo_timer.finish_time;
 
 #if DEBUG_MODE    
-    Serial.println("GIRA");
+    //Serial.println("GIRA");
 #endif
 
     servo_motor.write(servo_degrees);
 
-    if(servo_degrees == 180){
-      servo_degrees = 0;
+    if((!positive) || (servo_degrees == 180)){
+      if(servo_degrees == 0){
+        speed = MAX_TIME_SERVO;
+        servo_degrees--;
+        positive = true;
+      }
+      else{
+        if(servo_degrees == 180){
+          speed = MIN_TIME_SERVO;
+        }
+        servo_degrees--;
+      	positive = false;
+      }
     }
     else{
-      servo_degrees += 90;
+      servo_degrees++;
     }
     
   }
@@ -491,4 +507,3 @@ void print_string_on_lcd(const char *buffer, int row, int column){
 #endif  
   
 }
-
