@@ -318,7 +318,7 @@ void button_game(void){
   }
   else{
     
-    int button_state;
+       int button_state;
 	int random_number;
 
 	buzzer_timer.finish_time = millis();
@@ -357,7 +357,7 @@ void button_game(void){
       	sound_playing = false;
       	
   	    //El 1023 es por el valor maximo que retorna analogRead()
-        if(button_state == 1023 ){
+        if(button_state == HIGH ){
 	    
 #if DEBUG_MODE
           Serial.println("Boton apretado a tiempo");
