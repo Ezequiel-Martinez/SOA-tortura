@@ -85,9 +85,9 @@ char random_number_buffer[RANDOM_NUM_LENGTH];
 
 // mapa de teclas que vamos a usar del keypad
 char key_map[NUM_ROWS_KEYPAD][NUM_COLS_KEYPAD] = {
-    {'1', '2', '3'},
-    {'4', '5', '6'},
-    {'7', '8', '9'}};
+	{'1', '2', '3'},
+	{'4', '5', '6'},
+	{'7', '8', '9'}};
 
 byte row_pins[NUM_ROWS_KEYPAD] = {A2, A1, A0}; // pines a los cuales conectamos las filas del keypad
 byte col_pins[NUM_COLS_KEYPAD] = {13, 12, 11}; // pines a los cuales conectamos las columnas del keypad
@@ -172,7 +172,7 @@ void clear_serial(void)
 {
   if (Serial.available() > 0)
   {
-    int value = Serial.read();
+	int value = Serial.read();
   }
 }
 
@@ -190,37 +190,37 @@ void incoming_byte_processing()
   switch (incoming_byte)
   {
   case SerialMonitorCommands::BUTTON: // Paso por Serial Monitor para usar solamente el buzzer y el boton
-    print_string_on_lcd("Usando buzzer", 0, 0);
+	print_string_on_lcd("Usando buzzer", 0, 0);
 
 #if DEBUG_MODE
-    Serial.println("Modo de juego: buzzer - boton");
+	Serial.println("Modo de juego: buzzer - boton");
 #endif
-    break;
+	break;
   case SerialMonitorCommands::KEYPAD: // Paso por Serial Monitor para usar solamente el Keypad
-    generate_random_number(random_number_buffer);
-    print_string_on_lcd(random_number_buffer, 0, 3);
-    lcd_clear_timer.start_time = millis();
+	generate_random_number(random_number_buffer);
+	print_string_on_lcd(random_number_buffer, 0, 3);
+	lcd_clear_timer.start_time = millis();
 
 #if DEBUG_MODE
-    Serial.println("Modo de juego: keypad");
+	Serial.println("Modo de juego: keypad");
 #endif
-    break;
+	break;
   case SerialMonitorCommands::NORMAL: // Paso por Serial Monitor el funcionamiento normal (buzzer, boton y keypad)
-    generate_random_number(random_number_buffer);
-    print_string_on_lcd(random_number_buffer, 0, 3);
-    lcd_clear_timer.start_time = millis();
+	generate_random_number(random_number_buffer);
+	print_string_on_lcd(random_number_buffer, 0, 3);
+	lcd_clear_timer.start_time = millis();
 
 #if DEBUG_MODE
-    Serial.println("Modo de juego: buzzer - boton - keypad");
+	Serial.println("Modo de juego: buzzer - boton - keypad");
 #endif
-    break;
+	break;
   default:
-    playing = false;
+	playing = false;
 
 #if DEBUG_MODE
-    Serial.println("El comando ingresado es invalido");
+	Serial.println("El comando ingresado es invalido");
 #endif
-    break;
+	break;
   }
 }
 
@@ -229,25 +229,25 @@ void playing_process()
 {
   if (playing)
   {
-    switch (incoming_byte)
-    {
-    case SerialMonitorCommands::NORMAL:
-      buzzer_game();
-      keypad_game();
-      servo_motor_game();
-      break;
-    case SerialMonitorCommands::KEYPAD:
-      keypad_game();
-      servo_motor_game();
-      break;
-    case SerialMonitorCommands::BUTTON:
-      buzzer_game();
-      break;
-    case SerialMonitorCommands::NONE:
-      break;
-    default:
-      break;
-    }
+	switch (incoming_byte)
+	{
+	case SerialMonitorCommands::NORMAL:
+	  buzzer_game();
+	  keypad_game();
+	  servo_motor_game();
+	  break;
+	case SerialMonitorCommands::KEYPAD:
+	  keypad_game();
+	  servo_motor_game();
+	  break;
+	case SerialMonitorCommands::BUTTON:
+	  buzzer_game();
+	  break;
+	case SerialMonitorCommands::NONE:
+	  break;
+	default:
+	  break;
+	}
   }
 }
 
@@ -256,39 +256,39 @@ void loop()
 {
   if (analogRead(sensor_pin) < MIN_SENSOR_PRESSURE)
   {
-    clear_serial();
+	clear_serial();
 
-    if (print_sensor_message)
-    {
-      init_variables();
-      print_sensor_message = false;
-      print_game_mode_message = true;
-      print_string_on_lcd("Presione sensor.", 0, 0);
+	if (print_sensor_message)
+	{
+	  init_variables();
+	  print_sensor_message = false;
+	  print_game_mode_message = true;
+	  print_string_on_lcd("Presione sensor.", 0, 0);
 
 #if DEBUG_MODE
-      Serial.println("El sensor no esta presionado correctamente");
+	  Serial.println("El sensor no esta presionado correctamente");
 #endif
-    }
+	}
 
-    return;
+	return;
   }
 
   if (print_game_mode_message)
   {
-    print_sensor_message = true;
-    print_game_mode_message = false;
-    print_string_on_lcd("Seleccione modo.", 0, 0);
+	print_sensor_message = true;
+	print_game_mode_message = false;
+	print_string_on_lcd("Seleccione modo.", 0, 0);
 
 #if DEBUG_MODE
-    Serial.println("Seleccionando modo de juego");
+	Serial.println("Seleccionando modo de juego");
 #endif
 
-    return;
+	return;
   }
 
   if (!playing && Serial.available() > 0)
   { // Cuando hay algo para leer desde Serial Monitor
-    incoming_byte_processing();
+	incoming_byte_processing();
   }
 
   playing_process();
@@ -299,39 +299,39 @@ void buzzer_processing(void)
 {
   if ((tone_timer.finish_time = millis()) - tone_timer.start_time >= MAX_BUTTON_PRESS_DELAY)
   {
-    int button_state = digitalRead(button_pin);
+	int button_state = digitalRead(button_pin);
 
-    noTone(buzzer_pin);
-    tone_timer.start_time = tone_timer.finish_time;
-    sound_playing = false;
+	noTone(buzzer_pin);
+	tone_timer.start_time = tone_timer.finish_time;
+	sound_playing = false;
 
-    if (button_state == HIGH)
-    {
+	if (button_state == HIGH)
+	{
 #if DEBUG_MODE
-      Serial.println("Boton apretado a tiempo");
+	  Serial.println("Boton apretado a tiempo");
 #endif
-      button_points++;
+	  button_points++;
 
-      if (button_points == button_points_to_win)
-      {
-        init_variables();
-
-#if DEBUG_MODE
-        Serial.println("Ganaste el juego del boton");
-#endif
-      }
-
-      return;
-    }
+	  if (button_points == button_points_to_win)
+	  {
+		init_variables();
 
 #if DEBUG_MODE
-    Serial.println("Demasiado lento apretando el boton");
+		Serial.println("Ganaste el juego del boton");
+#endif
+	  }
+
+	  return;
+	}
+
+#if DEBUG_MODE
+	Serial.println("Demasiado lento apretando el boton");
 #endif
 
-    button_points = 0;
-    electrocuting = true;
-    shock_timer.start_time = millis();
-    modify_electric_shock();
+	button_points = 0;
+	electrocuting = true;
+	shock_timer.start_time = millis();
+	modify_electric_shock();
   }
 }
 
@@ -342,34 +342,34 @@ void buzzer_game(void)
 
   if (electrocuting && (shock_timer.finish_time - shock_timer.start_time >= MAX_TIME_ELECTRIC_SHOCK))
   {
-    intensity = ShockIntensity::INTENSITY_NONE;
-    modify_electric_shock();
-    electrocuting = false;
+	intensity = ShockIntensity::INTENSITY_NONE;
+	modify_electric_shock();
+	electrocuting = false;
 
-    return;
+	return;
   }
 
   if (!sound_playing && (buzzer_timer.finish_time - buzzer_timer.start_time < MAX_BUZZER_TIMER))
   { // espera el cooldown para hacer sonar el botón
-    return;
+	return;
   }
 
   buzzer_timer.start_time = buzzer_timer.finish_time;
 
   if (random(0, 100) & 1)
   { // Compara el ultimo caracter del numero generado con 1 (50% de chance)
-    if (!sound_playing)
-    {
+	if (!sound_playing)
+	{
 #if DEBUG_MODE
-      Serial.println("Apreta el boton");
+	  Serial.println("Apreta el boton");
 #endif
 
-      sound_playing = true;
-      tone(buzzer_pin, 800);
-      tone_timer.start_time = millis();
-    }
+	  sound_playing = true;
+	  tone(buzzer_pin, 800);
+	  tone_timer.start_time = millis();
+	}
 
-    buzzer_processing();
+	buzzer_processing();
   }
 }
 
@@ -380,7 +380,7 @@ void keypad_game(void)
 
   if (key == NO_KEY)
   {
-    return;
+	return;
   }
 
 #if DEBUG_MODE
@@ -392,52 +392,52 @@ void keypad_game(void)
 
   if (lcd_clear_timer.finish_time - lcd_clear_timer.start_time >= max_keypad_game_time)
   {
-    print_string_on_lcd("", 0, 0);
-    lcd_clear_timer.start_time = lcd_clear_timer.finish_time;
+	print_string_on_lcd("", 0, 0);
+	lcd_clear_timer.start_time = lcd_clear_timer.finish_time;
 
 #if DEBUG_MODE
-    Serial.println("Se alcanzo el tiempo maximo para mostrar el numero en el lcd");
+	Serial.println("Se alcanzo el tiempo maximo para mostrar el numero en el lcd");
 #endif
   }
 
   if (key != *(random_number_buffer + n_key_pressed))
   {
 #if DEBUG_MODE
-    Serial.print("El numero ingresado es erroneo. Se esperaba: ");
-    Serial.print(*(random_number_buffer + n_key_pressed));
-    Serial.print(" , y se recibio: ");
-    Serial.println(key);
+	Serial.print("El numero ingresado es erroneo. Se esperaba: ");
+	Serial.print(*(random_number_buffer + n_key_pressed));
+	Serial.print(" , y se recibio: ");
+	Serial.println(key);
 #endif
 
-    number_of_attempts++; // sumo uno a la cantidad de intentos que lleva el usuario en el keypad_game
+	number_of_attempts++; // sumo uno a la cantidad de intentos que lleva el usuario en el keypad_game
 
-    if (number_of_attempts > ShockIntensity::INTENSITY_MEDIUM)
-    {
-      intensity = ShockIntensity::INTENSITY_HIGH;
+	if (number_of_attempts > ShockIntensity::INTENSITY_MEDIUM)
+	{
+	  intensity = ShockIntensity::INTENSITY_HIGH;
 
 #if DEBUG_MODE
-      Serial.println("Cambiando a intensidad alta");
+	  Serial.println("Cambiando a intensidad alta");
 #endif
-    }
-    else if (number_of_attempts > ShockIntensity::INTENSITY_LOW)
-    {
-      intensity = ShockIntensity::INTENSITY_MEDIUM;
+	}
+	else if (number_of_attempts > ShockIntensity::INTENSITY_LOW)
+	{
+	  intensity = ShockIntensity::INTENSITY_MEDIUM;
 
 #if DEBUG_MODE
-      Serial.println("Cambiando a intensidad media");
+	  Serial.println("Cambiando a intensidad media");
 #endif
-    }
+	}
 
-    modify_electric_shock(); // Enciendo el led indicando que se electrocuto con la intensidad correspondiente
-    intensity = ShockIntensity::INTENSITY_NONE;
-    modify_electric_shock();
+	modify_electric_shock(); // Enciendo el led indicando que se electrocuto con la intensidad correspondiente
+	intensity = ShockIntensity::INTENSITY_NONE;
+	modify_electric_shock();
 
-    n_key_pressed = 0; // reinicio la cantidad de teclas presionadas
-    generate_random_number(random_number_buffer);
-    print_string_on_lcd(random_number_buffer, 0, 3);
-    lcd_clear_timer.start_time = millis();
+	n_key_pressed = 0; // reinicio la cantidad de teclas presionadas
+	generate_random_number(random_number_buffer);
+	print_string_on_lcd(random_number_buffer, 0, 3);
+	lcd_clear_timer.start_time = millis();
 
-    return;
+	return;
   }
 
   n_key_pressed++;
@@ -445,27 +445,27 @@ void keypad_game(void)
   if (n_key_pressed == RANDOM_NUM_LENGTH - 1)
   {
 #if DEBUG_MODE
-    Serial.println("El numero ingresado es correcto");
+	Serial.println("El numero ingresado es correcto");
 #endif
 
-    keypad_points++;
+	keypad_points++;
 
-    if (keypad_points == keypad_points_to_win)
-    {
-      init_variables();
+	if (keypad_points == keypad_points_to_win)
+	{
+	  init_variables();
 
 #if DEBUG_MODE
-      Serial.println("Ganaste el juego del keypad");
+	  Serial.println("Ganaste el juego del keypad");
 #endif
 
-      return;
-    }
+	  return;
+	}
 
-    n_key_pressed = 0;                                  // reinicio la cantidad de teclas presionadas
-    max_keypad_game_time -= KEYPAD_GAME_TIME_REDUCTION; // el siguiente numero va a tener menos tiempo en el lcd
-    generate_random_number(random_number_buffer);
-    print_string_on_lcd(random_number_buffer, 0, 3);
-    lcd_clear_timer.start_time = millis();
+	n_key_pressed = 0;                                  // reinicio la cantidad de teclas presionadas
+	max_keypad_game_time -= KEYPAD_GAME_TIME_REDUCTION; // el siguiente numero va a tener menos tiempo en el lcd
+	generate_random_number(random_number_buffer);
+	print_string_on_lcd(random_number_buffer, 0, 3);
+	lcd_clear_timer.start_time = millis();
   }
 }
 
@@ -476,43 +476,39 @@ void servo_motor_game(void)
 
   if ((servo_timer.finish_time - servo_timer.start_time) >= speed)
   {
-    servo_timer.start_time = servo_timer.finish_time;
+	servo_timer.start_time = servo_timer.finish_time;
 
-#if DEBUG_MODE
-    Serial.println("Girando servo motor");
-#endif
+	servo_motor.write(servo_degrees);
 
-    servo_motor.write(servo_degrees);
+	if (positive)
+	{
+	  if (servo_degrees + 1 == 180)
+	  {
+		speed = MIN_TIME_SERVO;
+		Serial.println("LENTO");
+		positive = false;
+	  }
+	  servo_degrees++;
+	}
+	else
+	{
+	  if ((servo_degrees - 1 == 0))
+	  {
+		speed = MAX_TIME_SERVO;
+		Serial.println("RAPIDO");
+		positive = true;
+	  }
+	  servo_degrees--;
+	}
 
-    if (positive)
-    {
-      if (servo_degrees + 1 == 180)
-      {
-        speed = MIN_TIME_SERVO;
-        Serial.println("LENTO");
-        positive = false;
-      }
-      servo_degrees++;
-    }
-    else
-    {
-      if ((servo_degrees - 1 == 0))
-      {
-        speed = MAX_TIME_SERVO;
-        Serial.println("RAPIDO");
-        positive = true;
-      }
-      servo_degrees--;
-    }
-
-    /*
-    if (servo_degrees == 180) {
-    servo_degrees = 0;
-    }
-    else {
-    servo_degrees += 90;
-    }
-    */
+	/*
+	if (servo_degrees == 180) {
+	servo_degrees = 0;
+	}
+	else {
+	servo_degrees += 90;
+	}
+	*/
   }
 }
 
@@ -521,7 +517,7 @@ void generate_random_number(char *buffer)
 {
   for (int i = 0; i < RANDOM_NUM_LENGTH; i++)
   {
-    *(buffer + i) = random(49, 57); // genero el ascii de un numero entre 1-9
+	*(buffer + i) = random(49, 57); // genero el ascii de un numero entre 1-9
   }
 
   *(buffer + RANDOM_NUM_LENGTH - 1) = '\0';
@@ -538,35 +534,35 @@ void modify_electric_shock(void)
   switch (intensity)
   {
   case NONE:
-    digitalWrite(led_pin, 0);
+	digitalWrite(led_pin, 0);
 
 #if DEBUG_MODE
-    Serial.println("Terminando choque electrico");
+	Serial.println("Terminando choque electrico");
 #endif
-    break;
+	break;
   case INTENSITY_LOW:
-    digitalWrite(led_pin, 70);
+	digitalWrite(led_pin, 70);
 
 #if DEBUG_MODE
-    Serial.println("Choque electrico con intensidad baja");
+	Serial.println("Choque electrico con intensidad baja");
 #endif
-    break;
+	break;
   case INTENSITY_MEDIUM:
-    digitalWrite(led_pin, 150);
+	digitalWrite(led_pin, 150);
 
 #if DEBUG_MODE
-    Serial.println("Choque electrico con intensidad media");
+	Serial.println("Choque electrico con intensidad media");
 #endif
-    break;
+	break;
   case INTENSITY_HIGH:
-    digitalWrite(led_pin, 255);
+	digitalWrite(led_pin, 255);
 
 #if DEBUG_MODE
-    Serial.println("Choque electrico con intensidad alta");
+	Serial.println("Choque electrico con intensidad alta");
 #endif
-    break;
+	break;
   default:
-    break;
+	break;
   }
 }
 
