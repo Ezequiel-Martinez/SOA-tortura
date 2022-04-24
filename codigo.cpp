@@ -35,8 +35,7 @@ enum SerialMonitorCommands
 {
 	KEYPAD = 'K',
 	BUTTON = 'B',
-	NORMAL = 'N',
-	NONE = 'Z'
+	NORMAL = 'N'
 };
 
 typedef struct
@@ -228,19 +227,17 @@ void playing_process()
 {
 	switch (incoming_byte)
 	{
-	case SerialMonitorCommands::NORMAL:
+	case SerialMonitorCommands::BUTTON:
 		buzzer_game();
-		keypad_game();
-		servo_motor_game();
 		break;
 	case SerialMonitorCommands::KEYPAD:
 		keypad_game();
 		servo_motor_game();
 		break;
-	case SerialMonitorCommands::BUTTON:
+	case SerialMonitorCommands::NORMAL:
 		buzzer_game();
-		break;
-	case SerialMonitorCommands::NONE:
+		keypad_game();
+		servo_motor_game();
 		break;
 	default:
 		break;
@@ -341,10 +338,13 @@ void buzzer_game(void)
 {
 	shock_timer.finish_time = buzzer_timer.finish_time = millis();
 
-	if (electrocuting && (shock_timer.finish_time - shock_timer.start_time >= MAX_TIME_ELECTRIC_SHOCK))
+	if (electrocuting)
 	{
-		modify_electric_shock(false);
-		electrocuting = false;
+		if (shock_timer.finish_time - shock_timer.start_time >= MAX_TIME_ELECTRIC_SHOCK)
+		{
+			modify_electric_shock(false);
+			electrocuting = false;
+		}
 
 		return;
 	}
@@ -528,6 +528,7 @@ void generate_random_number(char *buffer)
 // Modifica el valor de la intensidad del shock
 void modify_electric_shock(bool mode)
 {
+	// True cambia la intensidad, False la apaga
 	if (!mode)
 	{
 		digitalWrite(led_pin, 0);
