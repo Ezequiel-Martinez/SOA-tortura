@@ -26,7 +26,6 @@
 
 enum ShockIntensity
 {
-	INTENSITY_NONE,
 	INTENSITY_LOW = 2,
 	INTENSITY_MEDIUM = 4,
 	INTENSITY_HIGH
@@ -100,7 +99,7 @@ void keypad_game(void);
 void clear_serial(void);
 void init_variables(void);
 void servo_motor_game(void);
-void modify_electric_shock(void);
+void modify_electric_shock(bool mode);
 void generate_random_number(char *buffer);
 void print_string_on_lcd(const char *buffer, int row, int column);
 void playing_process(void);
@@ -227,27 +226,24 @@ void incoming_byte_processing()
 // Ejecuta el proceso del juego si este esta activo
 void playing_process()
 {
-	if (playing)
+	switch (incoming_byte)
 	{
-		switch (incoming_byte)
-		{
-		case SerialMonitorCommands::NORMAL:
-			buzzer_game();
-			keypad_game();
-			servo_motor_game();
-			break;
-		case SerialMonitorCommands::KEYPAD:
-			keypad_game();
-			servo_motor_game();
-			break;
-		case SerialMonitorCommands::BUTTON:
-			buzzer_game();
-			break;
-		case SerialMonitorCommands::NONE:
-			break;
-		default:
-			break;
-		}
+	case SerialMonitorCommands::NORMAL:
+		buzzer_game();
+		keypad_game();
+		servo_motor_game();
+		break;
+	case SerialMonitorCommands::KEYPAD:
+		keypad_game();
+		servo_motor_game();
+		break;
+	case SerialMonitorCommands::BUTTON:
+		buzzer_game();
+		break;
+	case SerialMonitorCommands::NONE:
+		break;
+	default:
+		break;
 	}
 }
 
@@ -291,15 +287,20 @@ void loop()
 		incoming_byte_processing();
 	}
 
-	playing_process();
+	if (playing)
+	{
+		playing_process();
+	}
 }
 
 // Procesa el boton asociado al buzzer_game
 void buzzer_processing(void)
 {
+	int button_state;
+
 	if ((tone_timer.finish_time = millis()) - tone_timer.start_time >= MAX_BUTTON_PRESS_DELAY)
 	{
-		int button_state = digitalRead(button_pin);
+		button_state = digitalRead(button_pin);
 
 		noTone(buzzer_pin);
 		tone_timer.start_time = tone_timer.finish_time;
@@ -331,7 +332,7 @@ void buzzer_processing(void)
 		button_points = 0;
 		electrocuting = true;
 		shock_timer.start_time = millis();
-		modify_electric_shock();
+		modify_electric_shock(true);
 	}
 }
 
@@ -342,22 +343,23 @@ void buzzer_game(void)
 
 	if (electrocuting && (shock_timer.finish_time - shock_timer.start_time >= MAX_TIME_ELECTRIC_SHOCK))
 	{
-		intensity = ShockIntensity::INTENSITY_NONE;
-		modify_electric_shock();
+		modify_electric_shock(false);
 		electrocuting = false;
 
 		return;
 	}
 
+	// espera el cooldown para hacer sonar el botón
 	if (!sound_playing && (buzzer_timer.finish_time - buzzer_timer.start_time < MAX_BUZZER_TIMER))
-	{ // espera el cooldown para hacer sonar el botón
+	{
 		return;
 	}
 
 	buzzer_timer.start_time = buzzer_timer.finish_time;
 
+	// Compara el ultimo caracter del numero generado con 1 (50% de chance)
 	if (random(0, 100) & 1)
-	{ // Compara el ultimo caracter del numero generado con 1 (50% de chance)
+	{
 		if (!sound_playing)
 		{
 #if DEBUG_MODE
@@ -428,9 +430,8 @@ void keypad_game(void)
 #endif
 		}
 
-		modify_electric_shock(); // Enciendo el led indicando que se electrocuto con la intensidad correspondiente
-		intensity = ShockIntensity::INTENSITY_NONE;
-		modify_electric_shock();
+		modify_electric_shock(true); // Enciendo el led indicando que se electrocuto con la intensidad correspondiente
+		modify_electric_shock(false);
 
 		n_key_pressed = 0; // reinicio la cantidad de teclas presionadas
 		generate_random_number(random_number_buffer);
@@ -525,17 +526,21 @@ void generate_random_number(char *buffer)
 }
 
 // Modifica el valor de la intensidad del shock
-void modify_electric_shock(void)
+void modify_electric_shock(bool mode)
 {
-	switch (intensity)
+	if (!mode)
 	{
-	case INTENSITY_NONE:
 		digitalWrite(led_pin, 0);
 
 #if DEBUG_MODE
 		Serial.println("Terminando choque electrico");
 #endif
-		break;
+
+		return;
+	}
+
+	switch (intensity)
+	{
 	case INTENSITY_LOW:
 		digitalWrite(led_pin, 70);
 
