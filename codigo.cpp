@@ -200,8 +200,8 @@ void init_variables(void)
 	button_points = 0;
 	keypad_points = 0;
 	number_of_attempts = 0;
-	button_points_to_win = 3;
-	keypad_points_to_win = 5;
+	button_points_to_win = 1;
+	keypad_points_to_win = 1;
 	playing = false;
 	electrocuting = false;
 	sound_playing = false;
@@ -378,6 +378,15 @@ void buzzer_game(void)
 // Funcion que se encarga de todo lo relacionado con el keypad
 void keypad_game(void)
 {
+
+	lcd_clear_timer.finish_time = millis();
+  
+	if (lcd_clear_timer.finish_time - lcd_clear_timer.start_time >= max_keypad_game_time)
+	{
+		print_string_on_lcd("", 0, 0);
+		lcd_clear_timer.start_time = lcd_clear_timer.finish_time;
+	}
+  
 	char key = keypad.getKey();
 
 	if (key == NO_KEY)
@@ -388,19 +397,7 @@ void keypad_game(void)
 #if DEBUG_MODE
 	Serial.print("Tecla presionada: ");
 	Serial.println(key);
-#endif
-
-	lcd_clear_timer.finish_time = millis();
-
-	if (lcd_clear_timer.finish_time - lcd_clear_timer.start_time >= max_keypad_game_time)
-	{
-		print_string_on_lcd("", 0, 0);
-		lcd_clear_timer.start_time = lcd_clear_timer.finish_time;
-
-#if DEBUG_MODE
-		Serial.println("Se alcanzo el tiempo maximo para mostrar el numero en el lcd");
-#endif
-	}
+#endif  
 
 	if (key != *(random_number_buffer + n_key_pressed))
 	{
