@@ -146,6 +146,52 @@ void setup()
 	buzzer_timer.start_time = millis();
 }
 
+// Proceso principal del dispositivo
+void loop()
+{
+	if (analogRead(sensor_pin) < MIN_SENSOR_PRESSURE)
+	{
+		clear_serial();
+
+		if (print_sensor_message)
+		{
+			init_variables();
+			print_sensor_message = false;
+			print_game_mode_message = true;
+			print_string_on_lcd("Presione sensor.", 0, 0);
+
+#if DEBUG_MODE
+			Serial.println("El sensor no esta presionado correctamente");
+#endif
+		}
+
+		return;
+	}
+
+	if (print_game_mode_message)
+	{
+		print_sensor_message = true;
+		print_game_mode_message = false;
+		print_string_on_lcd("Seleccione modo.", 0, 0);
+
+#if DEBUG_MODE
+		Serial.println("Seleccionando modo de juego");
+#endif
+
+		return;
+	}
+
+	if (!playing && Serial.available() > 0)
+	{ // Cuando hay algo para leer desde Serial Monitor
+		incoming_byte_processing();
+	}
+
+	if (playing)
+	{
+		playing_process();
+	}
+}
+
 // Inicializacion de variables globales
 void init_variables(void)
 {
@@ -161,7 +207,6 @@ void init_variables(void)
 	sound_playing = false;
 	positive = true;
 	intensity = ShockIntensity::INTENSITY_LOW;	 // por defecto arrancamos con una intensidad baja
-	incoming_byte = SerialMonitorCommands::NONE; // por defecto arranco el juego si un game mode
 	randomSeed(analogRead(A5));					 // seteamos un seed para el generador random
 }
 
@@ -244,52 +289,6 @@ void playing_process()
 	}
 }
 
-// Proceso principal del dispositivo
-void loop()
-{
-	if (analogRead(sensor_pin) < MIN_SENSOR_PRESSURE)
-	{
-		clear_serial();
-
-		if (print_sensor_message)
-		{
-			init_variables();
-			print_sensor_message = false;
-			print_game_mode_message = true;
-			print_string_on_lcd("Presione sensor.", 0, 0);
-
-#if DEBUG_MODE
-			Serial.println("El sensor no esta presionado correctamente");
-#endif
-		}
-
-		return;
-	}
-
-	if (print_game_mode_message)
-	{
-		print_sensor_message = true;
-		print_game_mode_message = false;
-		print_string_on_lcd("Seleccione modo.", 0, 0);
-
-#if DEBUG_MODE
-		Serial.println("Seleccionando modo de juego");
-#endif
-
-		return;
-	}
-
-	if (!playing && Serial.available() > 0)
-	{ // Cuando hay algo para leer desde Serial Monitor
-		incoming_byte_processing();
-	}
-
-	if (playing)
-	{
-		playing_process();
-	}
-}
-
 // Procesa el boton asociado al buzzer_game
 void buzzer_processing(void)
 {
@@ -313,6 +312,7 @@ void buzzer_processing(void)
 			if (button_points == button_points_to_win)
 			{
 				init_variables();
+				print_game_mode_message = true;
 
 #if DEBUG_MODE
 				Serial.println("Ganaste el juego del boton");
@@ -454,6 +454,7 @@ void keypad_game(void)
 		if (keypad_points == keypad_points_to_win)
 		{
 			init_variables();
+			print_game_mode_message = true;
 
 #if DEBUG_MODE
 			Serial.println("Ganaste el juego del keypad");
