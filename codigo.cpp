@@ -326,6 +326,10 @@ void button_game(void)
 		event = EVENT_SENSOR_RELEASED;
 		return;
 	}
+	else // Provicional
+	{
+		event = EVENT_SENSOR_PRESSED;
+	}
 
 	shock_timer.finish_time = buzzer_timer.finish_time = millis();
 
@@ -374,13 +378,16 @@ void keypad_game(void)
 		current_state = STATE_KEYPAD_GAME;
 	}
 	
-
 	if (!is_sensor_pressed())
 	{
 		event = EVENT_SENSOR_RELEASED;
 		return;
 	}
-
+	else // Provicional
+	{
+		event = EVENT_SENSOR_PRESSED;
+	}
+	
 	servo();
 
 	if (clear_lcd && ((lcd_clear_timer.finish_time = millis()) - lcd_clear_timer.start_time) >= max_keypad_game_time)
