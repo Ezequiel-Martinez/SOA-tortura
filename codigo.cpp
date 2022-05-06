@@ -477,7 +477,6 @@ void normal_game(void)
 {
 	current_state = STATE_NORMAL_GAME;
 
-
 	button_game();
 	keypad_game();
 	servo();
