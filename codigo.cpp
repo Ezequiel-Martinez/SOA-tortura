@@ -26,10 +26,22 @@
 #define MAX_BUTTON_PRESS_DELAY 400	// cantidad de tiempo maximo que tiene el usuario para presionar el boton luego de escuchar el sonido en microsegundos
 #define MAX_TIME_ELECTRIC_SHOCK 100 // tiempo que quiero electrocutar al usuario en microsegundos
 
+#define ASCII_NUMBER_ONE 49
+#define ASCII_NUMBER_NINE 57
+#define LED_INTENSITY_CERO 0
+#define LED_INTENSITY_LOW 70
+#define LED_INTENSITY_MEDIUM 150
+#define LED_INTENSITY_HIGH 255
+#define TONE_FREQUENCY
+#define MIN_SERVO_ANGLE 0
+#define MAX_SERVO_ANGLE 180
+#define MIN_SERVO_PULSE_WIDTH 500
+#define MAX_SERVO_PULSE_WIDTH 2500
 #define RANDOM_NUM_LENGTH 11		   // cantidad de digitos que queremos que tenga el numero random ( contemplando el '\0')
 #define BUTTON_POINTS_TO_WIN 3		   // cantidad de puntos que necesito para ganar
 #define KEYPAD_POINTS_TO_WIN 3		   // cantidad de puntos que necesito para ganar
 #define KEYPAD_GAME_TIME_REDUCTION 500 // cantidad de tiempo que se va a restar a max_keypad_game_time cada vez que el usuario gana
+#define MAX_KEYPAD_GAME_TIME 1000
 
 #define LED_PIN 3
 #define SERVO_PIN 10
@@ -179,7 +191,7 @@ void setup()
 
 	// Servo
 	servo_degrees = 0;
-	servo_motor.attach(SERVO_PIN, 500, 2500);
+	servo_motor.attach(SERVO_PIN,MIN_SERVO_PULSE_WIDTH,MAX_SERVO_PULSE_WIDTH);
 	servo_motor.write(servo_degrees);
 
 	// Led
@@ -190,7 +202,7 @@ void setup()
 	print_sensor_message = true; // Dejar esto aca
 
 	// Keypad
-	max_keypad_game_time = 1000;
+	max_keypad_game_time = MAX_KEYPAD_GAME_TIME;
 	pinMode(A0, INPUT); // pin que usamos para declarar la variable keypad
 	pinMode(A1, INPUT); // pin que usamos para declarar la variable keypad
 	pinMode(A2, INPUT); // pin que usamos para declarar la variable keypad
@@ -349,7 +361,7 @@ void button_game(void)
 
 	buzzer_timer.start_time = buzzer_timer.finish_time;
 
-	// Compara el ultimo caracter del numero generado con 1 (50% de chance)
+	// Compara el ultimo caracter del numero generado con 1 (50% de chance)	
 	if (random(0, 100) & 1)
 	{
 		if (!sound_playing)
@@ -359,7 +371,7 @@ void button_game(void)
 #endif
 
 			sound_playing = true;
-			tone(BUZZER_PIN, 800);
+			tone(BUZZER_PIN,TONE_FREQUENCY);
 			tone_timer.start_time = millis();
 		}
 
@@ -550,7 +562,7 @@ void servo(void)
 
 		if (positive)
 		{
-			if (servo_degrees + 1 == 180)
+			if (servo_degrees + 1 == MAX_SERVO_ANGLE)
 			{
 				speed = MIN_TIME_SERVO;
 #if DEBUG_MODE
@@ -563,7 +575,7 @@ void servo(void)
 		}
 		else
 		{
-			if ((servo_degrees - 1 == 0))
+			if ((servo_degrees - 1 == MIN_SERVO_ANGLE))
 			{
 				speed = MAX_TIME_SERVO;
 #if DEBUG_MODE
@@ -641,7 +653,7 @@ void modify_electric_shock(bool mode)
 	// True cambia la intensidad, False la apaga
 	if (!mode)
 	{
-		digitalWrite(LED_PIN, 0);
+		digitalWrite(LED_PIN,LED_INTENSITY_CERO);
 
 #if DEBUG_MODE
 		Serial.println("Terminando choque electrico");
@@ -652,21 +664,21 @@ void modify_electric_shock(bool mode)
 	switch (intensity)
 	{
 	case INTENSITY_LOW:
-		digitalWrite(LED_PIN, 70);
+		digitalWrite(LED_PIN,LED_INTENSITY_LOW);
 
 #if DEBUG_MODE
 		Serial.println("Choque electrico con intensidad baja");
 #endif
 		break;
 	case INTENSITY_MEDIUM:
-		digitalWrite(LED_PIN, 150);
+		digitalWrite(LED_PIN,LED_INTENSITY_MEDIUM);
 
 #if DEBUG_MODE
 		Serial.println("Choque electrico con intensidad media");
 #endif
 		break;
 	case INTENSITY_HIGH:
-		digitalWrite(LED_PIN, 255);
+		digitalWrite(LED_PIN,LED_INTENSITY_HIGH);
 
 #if DEBUG_MODE
 		Serial.println("Choque electrico con intensidad alta");
@@ -680,11 +692,17 @@ void modify_electric_shock(bool mode)
 // Funcion que genera un numero random de 10 digitos y lo almacena en el buffer recibido
 void generate_random_number(char *buffer)
 {
-	for (int i = 0; i < RANDOM_NUM_LENGTH; i++)
-	{
-		*(buffer + i) = random(49, 57); // genero el ascii de un numero entre 1-9
-	}
 
+	*(buffer + i++) = random(ASCII_NUMBER_ONE,ASCII_NUMBER_NINE);
+	*(buffer + i++) = random(ASCII_NUMBER_ONE,ASCII_NUMBER_NINE);
+	*(buffer + i++) = random(ASCII_NUMBER_ONE,ASCII_NUMBER_NINE);
+	*(buffer + i++) = random(ASCII_NUMBER_ONE,ASCII_NUMBER_NINE);
+	*(buffer + i++) = random(ASCII_NUMBER_ONE,ASCII_NUMBER_NINE);
+	*(buffer + i++) = random(ASCII_NUMBER_ONE,ASCII_NUMBER_NINE);
+	*(buffer + i++) = random(ASCII_NUMBER_ONE,ASCII_NUMBER_NINE);
+	*(buffer + i++) = random(ASCII_NUMBER_ONE,ASCII_NUMBER_NINE);
+	*(buffer + i++) = random(ASCII_NUMBER_ONE,ASCII_NUMBER_NINE);
+	*(buffer + i++) = random(ASCII_NUMBER_ONE,ASCII_NUMBER_NINE);
 	*(buffer + RANDOM_NUM_LENGTH - 1) = '\0';
 
 #if DEBUG_MODE
