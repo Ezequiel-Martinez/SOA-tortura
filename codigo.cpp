@@ -220,6 +220,7 @@ void loop()
 	fsm();
 }
 
+// Procesamiento de estados
 void fsm(void)
 {
 	if (event >= 0 && event < NUMBER_OF_EVENTS && current_state >= 0 && current_state < NUMBER_OF_STATES)
@@ -231,11 +232,13 @@ void fsm(void)
 	state_table[STATE_UNKNOWN][EVENT_UNKNOWK](); // si llega a ocurrir algun error queda siempre aca
 }
 
+// Funcion DUMMY
 void none(void)
 {
 	// No hace nada
 }
 
+// Reinicia las variables
 void init_(void)
 {
 	n_key_pressed = 0;
@@ -255,12 +258,14 @@ void init_(void)
 	noTone(BUZZER_PIN);
 }
 
+// Pone al dispositivo en punto muerto
 void error(void)
 {
 	init_();
 	current_state = STATE_UNKNOWN;
 }
 
+// Espera a que se presione el sensor
 void sensor_wait(void)
 {
 	if (analogRead(SENSOR_PIN) < MIN_SENSOR_PRESSURE)
@@ -288,6 +293,7 @@ void sensor_wait(void)
 	current_state = STATE_WAIT_MODE;
 }
 
+// Espera el modo de juego
 void wait_mode(void)
 {
 	if (!is_sensor_pressed())
@@ -387,7 +393,7 @@ void keypad_game(void)
 	{
 		event = EVENT_SENSOR_PRESSED;
 	}
-	
+
 	servo();
 
 	if (clear_lcd && ((lcd_clear_timer.finish_time = millis()) - lcd_clear_timer.start_time) >= max_keypad_game_time)
@@ -480,13 +486,13 @@ void keypad_game(void)
 	}
 }
 
+// Funcion que ejecuta ambos juegos
 void normal_game(void)
 {
 	current_state = STATE_NORMAL_GAME;
 
 	button_game();
 	keypad_game();
-	servo();
 }
 
 // Funcion que se encarga de procesar el buzzer asociado con el juego del boton
