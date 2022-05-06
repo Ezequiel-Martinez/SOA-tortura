@@ -158,9 +158,9 @@ T_transition state_table[NUMBER_OF_STATES][NUMBER_OF_EVENTS] =
 		init_, 		error, 					error, 					error, 				error, 				error, 				error,			// STATE_INIT
 		none, 		wait_mode, 				sensor_wait,			none, 				none, 				none, 				none,			// STATE_SENSOR_WAIT
 		none, 		wait_mode, 				sensor_wait, 			button_game, 		keypad_game, 		normal_game, 		error, 			// STATE_WAIT_MODE
-		none, 		button_game, 			sensor_wait, 			none, 				none, 				none, 				error			// STATE_BUTTON_GAME
-		none, 		keypad_game, 			sensor_wait, 			none, 				none, 				none, 				error			// STATE_KEYPAD_GAME
-		none, 		normal_game, 			sensor_wait, 			none, 				none, 				none, 				error			// STATE_NORMAL_GAME
+		none, 		button_game, 			sensor_wait, 			none, 				none, 				none, 				error,			// STATE_BUTTON_GAME
+		none, 		keypad_game, 			sensor_wait, 			none, 				none, 				none, 				error,			// STATE_KEYPAD_GAME
+		none, 		normal_game, 			sensor_wait, 			none, 				none, 				none, 				error,			// STATE_NORMAL_GAME
 		error, 		error, 					error, 					error, 				error, 				error, 				error			// STATE_UNKNOWN
 };
 
