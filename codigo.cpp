@@ -61,7 +61,7 @@ void print_string_on_lcd(const char *buffer, int row, int column);
 enum State
 {
 	STATE_INIT,
-	STATE_SENSOR,
+	STATE_SENSOR_WAIT,
 	STATE_WAIT_MODE,
 	STATE_BUTTON_GAME,
 	STATE_KEYPAD_GAME.
@@ -250,7 +250,7 @@ void init_(void)
 	speed = MAX_TIME_SERVO;
 	intensity = ShockIntensity::INTENSITY_LOW; // por defecto arrancamos con una intensidad baja
 	event = is_sensor_pressed() ? EVENT_SENSOR_PRESSED : EVENT_SENSOR_RELEASED;
-	current_state = STATE_SENSOR;
+	current_state = STATE_SENSOR_WAIT;
 	digitalWrite(LED_PIN, 0);
 	noTone(BUZZER_PIN);
 }
