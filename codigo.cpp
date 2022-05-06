@@ -64,8 +64,8 @@ enum State
 	STATE_SENSOR_WAIT,
 	STATE_WAIT_MODE,
 	STATE_BUTTON_GAME,
-	STATE_KEYPAD_GAME.
-	STATE_NORMAL_GAME
+	STATE_KEYPAD_GAME,
+	STATE_NORMAL_GAME,
 	STATE_UNKNOWN,
 	NUMBER_OF_STATES
 };
@@ -316,6 +316,11 @@ void wait_mode(void)
 // Funcion que se encarga de todo lo relacionado al juego del boton
 void button_game(void)
 {
+	if (current_state != STATE_NORMAL_GAME)
+	{
+		current_state = STATE_BUTTON_GAME;
+	}
+	
 	if (!is_sensor_pressed())
 	{
 		event = EVENT_SENSOR_RELEASED;
@@ -364,6 +369,12 @@ void button_game(void)
 // Funcion que se encarga de todo lo relacionado al juego del keypad
 void keypad_game(void)
 {
+	if (current_state != STATE_NORMAL_GAME)
+	{
+		current_state = STATE_KEYPAD_GAME;
+	}
+	
+
 	if (!is_sensor_pressed())
 	{
 		event = EVENT_SENSOR_RELEASED;
@@ -464,6 +475,9 @@ void keypad_game(void)
 
 void normal_game(void)
 {
+	current_state = STATE_NORMAL_GAME;
+
+
 	button_game();
 	keypad_game();
 	servo();
