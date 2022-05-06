@@ -62,7 +62,7 @@ enum State
 {
 	STATE_INIT,
 	STATE_SENSOR,
-	STATE_GAME_MODE,
+	STATE_WAIT_MODE,
 	STATE_BUTTON_GAME,
 	STATE_KEYPAD_GAME.
 	STATE_NORMAL_GAME
@@ -285,7 +285,7 @@ void sensor_wait(void)
 	}
 
 	event = EVENT_SENSOR_PRESSED;
-	current_state = STATE_GAME_MODE;
+	current_state = STATE_WAIT_MODE;
 }
 
 void wait_mode(void)
