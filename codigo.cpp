@@ -143,15 +143,6 @@ byte col_pins[NUM_COLS_KEYPAD] = {13, 12, 11}; // pines a los cuales conectamos 
 // creamos la variable del keypad
 Keypad keypad = Keypad(makeKeymap(key_map), row_pins, col_pins, NUM_ROWS_KEYPAD, NUM_COLS_KEYPAD);
 
-/*T_transition state_table[NUMBER_OF_STATES][NUMBER_OF_EVENTS] =
-	{
-	 // EVENT_CONT, EVENT_SENSOR_PRESSED, 	EVENT_SENSOR_RELEASED, 	EVENT_CHARACTER_B, 	EVENT_CHARACTER_K, 	EVENT_CHARACTER_N, 	EVENT_UNKNOWK
-		init_, 		error, 					error, 					error, 				error, 				error, 				error,			// STATE_INIT
-		none, 		wait_mode, 				sensor_wait, 			error, 				error, 				error, 				error,			// STATE_SENSOR
-		none, 		wait_mode, 				sensor_wait, 			button_game, 		keypad_game, 		normal_game, 		error, 			// STATE_GAME_MODE
-		error, 		error, 					error, 					error, 				error, 				error, 				error			// STATE_UNKNOWN
-};*/
-
 T_transition state_table[NUMBER_OF_STATES][NUMBER_OF_EVENTS] =
 	{
 	 // EVENT_CONT, EVENT_SENSOR_PRESSED, 	EVENT_SENSOR_RELEASED, 	EVENT_CHARACTER_B, 	EVENT_CHARACTER_K, 	EVENT_CHARACTER_N, 	EVENT_UNKNOWK
