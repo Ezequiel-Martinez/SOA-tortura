@@ -26,6 +26,8 @@
 #define MAX_BUTTON_PRESS_DELAY 400	// cantidad de tiempo maximo que tiene el usuario para presionar el boton luego de escuchar el sonido en microsegundos
 #define MAX_TIME_ELECTRIC_SHOCK 100 // tiempo que quiero electrocutar al usuario en microsegundos
 
+#define MIN_BUTTON_GAME_RANDOM_VALUE 0
+#define MAX_BUTTON_GAME_RANDOM_VALUE 100
 #define ASCII_NUMBER_ONE 49
 #define ASCII_NUMBER_NINE 57
 #define LED_INTENSITY_CERO 0
@@ -361,8 +363,8 @@ void button_game(void)
 
 	buzzer_timer.start_time = buzzer_timer.finish_time;
 
-	// Compara el ultimo caracter del numero generado con 1 (50% de chance)	
-	if (random(0, 100) & 1)
+	// Compara el ultimo bit del numero generado con 1 (50% de chance)	
+	if (random(MIN_BUTTON_GAME_RANDOM_VALUE,MAX_BUTTON_GAME_RANDOM_VALUE) & 1)
 	{
 		if (!sound_playing)
 		{
