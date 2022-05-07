@@ -310,7 +310,7 @@ void sensor_wait(void)
 
 	if (print_sensor_message)
 	{
-		event = EVENT_CONT;
+		current_event = EVENT_CONT;
 		current_state = STATE_INIT;
 		print_sensor_message = false;
 		print_game_mode_message = true;
@@ -618,7 +618,7 @@ bool is_mode_selected(void)
 #endif
 			break;
 		default:
-			event = EVENT_UNKNOWK;
+			current_event = EVENT_UNKNOWK;
 
 #if DEBUG_MODE
 			Serial.println("El comando ingresado es invalido");
