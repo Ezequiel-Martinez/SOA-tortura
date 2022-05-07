@@ -571,7 +571,6 @@ bool is_sensor_released()
 	if (!(analogRead(SENSOR_PIN) > MIN_SENSOR_PRESSURE))
 	{
 		current_event = EVENT_SENSOR_RELEASED;
-		print_sensor_message = true;
 		return true;
 	}
 
