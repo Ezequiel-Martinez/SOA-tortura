@@ -124,7 +124,6 @@ typedef struct
 } t_timer;
 
 // Variables globales
-Event event;
 Event current_event;
 State current_state;
 
@@ -256,9 +255,9 @@ void fsm(void)
 {
 	get_new_event();
 
-	if (event >= 0 && event < NUMBER_OF_EVENTS && current_state >= 0 && current_state < NUMBER_OF_STATES)
+	if (current_event >= 0 && current_event < NUMBER_OF_EVENTS && current_state >= 0 && current_state < NUMBER_OF_STATES)
 	{
-		state_table[current_state][event]();
+		state_table[current_state][current_event]();
 		return;
 	}
 
@@ -708,6 +707,8 @@ void modify_electric_shock(bool mode)
 // Funcion que genera un numero random de 10 digitos y lo almacena en el buffer recibido
 void generate_random_number(char *buffer)
 {
+	int i = 0;
+
 	*(buffer + i++) = random(ASCII_NUMBER_ONE,ASCII_NUMBER_NINE);
 	*(buffer + i++) = random(ASCII_NUMBER_ONE,ASCII_NUMBER_NINE);
 	*(buffer + i++) = random(ASCII_NUMBER_ONE,ASCII_NUMBER_NINE);
