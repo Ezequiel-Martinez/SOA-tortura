@@ -166,14 +166,14 @@ Keypad keypad = Keypad(makeKeymap(key_map), row_pins, col_pins, NUM_ROWS_KEYPAD,
 
 T_transition state_table[NUMBER_OF_STATES][NUMBER_OF_EVENTS] =
 	{
-		// EVENT_CONT, EVENT_SENSOR_PRESSED, 	EVENT_SENSOR_RELEASED, 	EVENT_CHARACTER_B, 	EVENT_CHARACTER_K, 	EVENT_CHARACTER_N, 	EVENT_WIN, EVENT_UNKNOWK
-		init_, wait_mode, sensor_wait, error, error, error, error, error,				   // STATE_INIT
-		none, wait_mode, sensor_wait, none, none, none, error, error,					   // STATE_SENSOR_WAIT
-		none, wait_mode, sensor_wait, button_game, keypad_game, normal_game, error, error, // STATE_WAIT_MODE
-		none, button_game, sensor_wait, none, none, none, init_, error,					   // STATE_BUTTON_GAME
-		none, keypad_game, sensor_wait, none, none, none, init_, error,					   // STATE_KEYPAD_GAME
-		none, normal_game, sensor_wait, none, none, none, init_, error,					   // STATE_NORMAL_GAME
-		error, error, error, error, error, error, error, error,							   // STATE_UNKNOWN
+		// EVENT_CONT, EVENT_SENSOR_PRESSED, EVENT_SENSOR_RELEASED, EVENT_CHARACTER_B, EVENT_CHARACTER_K, EVENT_CHARACTER_N, EVENT_WIN, EVENT_UNKNOWK
+		init_, 		   wait_mode, 			 sensor_wait, 			error, 			   error, 			  error, 			 error, 	error, // STATE_INIT
+		none, 		   wait_mode, 			 sensor_wait, 			none, 			   none, 			  none, 			 error, 	error, // STATE_SENSOR_WAIT
+		none, 		   wait_mode, 			 sensor_wait, 			button_game, 	   keypad_game, 	  normal_game, 		 error, 	error, // STATE_WAIT_MODE
+		none, 		   button_game, 		 sensor_wait, 			none, 			   none, 			  none, 			 init_, 	error, // STATE_BUTTON_GAME
+		none, 		   keypad_game, 		 sensor_wait, 			none, 			   none, 			  none, 			 init_, 	error, // STATE_KEYPAD_GAME
+		none, 		   normal_game, 		 sensor_wait, 			none, 			   none, 			  none, 			 init_, 	error, // STATE_NORMAL_GAME
+		error, 		   error, 				 error, 		 		error, 			   error, 			  error, 			 error, 	error, // STATE_UNKNOWN
 };
 
 /*De esta forma queda mas facil de leer y cada juego tiene su estado, de forma que evitamos switches engorrosos
@@ -239,6 +239,7 @@ void setup()
 
 	// Timer
 	buzzer_timer.start_time = millis();
+	get_event_timer.start_time = millis();
 
 	// State machine
 	current_event = EVENT_CONT;
@@ -294,7 +295,6 @@ void init_(void)
 	intensity = ShockIntensity::SHOCK_LEVEL_LOW; // por defecto arrancamos con una intensidad baja
 	digitalWrite(LED_PIN, 0);
 	noTone(BUZZER_PIN);
-	get_event_timer.start_time = millis();
 }
 
 // Pone al dispositivo en punto muerto
@@ -305,7 +305,7 @@ void error(void)
 }
 
 // Espera a que se presione el sensor
-void sensor_wait(void)
+void sensor_wait()
 {
 	current_state = STATE_SENSOR_WAIT;
 
@@ -324,7 +324,7 @@ void sensor_wait(void)
 }
 
 // Espera el modo de juego
-void wait_mode(void)
+void wait_mode()
 {
 	current_state = STATE_WAIT_MODE;
 
@@ -341,7 +341,7 @@ void wait_mode(void)
 }
 
 // Funcion que se encarga de todo lo relacionado al juego del boton
-void button_game(void)
+void button_game()
 {
 	if (current_state != STATE_NORMAL_GAME)
 	{
@@ -388,7 +388,7 @@ void button_game(void)
 }
 
 // Funcion que se encarga de todo lo relacionado al juego del keypad
-void keypad_game(void)
+void keypad_game()
 {
 	char key;
 
@@ -478,7 +478,7 @@ void keypad_game(void)
 }
 
 // Funcion que ejecuta ambos juegos
-void normal_game(void)
+void normal_game()
 {
 	if (current_state != STATE_NORMAL_GAME)
 	{
@@ -490,7 +490,7 @@ void normal_game(void)
 }
 
 // Funcion que se encarga de procesar el buzzer asociado con el juego del boton
-void buzzer_processing(void)
+void buzzer_processing()
 {
 	int button_state;
 
@@ -524,7 +524,7 @@ void buzzer_processing(void)
 }
 
 // Funcion que limpia el contenido de la consola
-void clear_serial(void)
+void clear_serial()
 {
 	if (Serial.available() > 0)
 	{
@@ -533,7 +533,7 @@ void clear_serial(void)
 }
 
 // Funcion para girar el servo motor de forma aleatoria
-void servo(void)
+void servo()
 {
 	if (((servo_timer.finish_time = millis()) - servo_timer.start_time) >= speed)
 	{
@@ -581,7 +581,7 @@ bool is_sensor_released()
 }
 
 // Procesa el byte cargado en consola
-bool is_mode_selected(void)
+bool is_mode_selected()
 {
 	int incoming_byte = 0;
 
