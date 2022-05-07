@@ -305,18 +305,20 @@ void error()
 	current_state = STATE_UNKNOWN;
 }
 
+// Reset rapido por interrupcion de game_modes
 void quick_reset()
 {
 	keypad_reset = true;
 
 	electrocuting = false;
+	sound_playing = false;
 	
 	speed = MAX_TIME_SERVO;
 	intensity = ShockIntensity::SHOCK_LEVEL_LOW; // por defecto arrancamos con una intensidad baja
 
 	clear_serial();
-	digitalWrite(LED_PIN, SHOCK_INTENSITY_CERO);
 	noTone(BUZZER_PIN);
+	digitalWrite(LED_PIN, SHOCK_INTENSITY_CERO);
 }
 
 // Espera a que se presione el sensor
