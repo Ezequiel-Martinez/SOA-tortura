@@ -73,7 +73,6 @@ void print_string_on_lcd(const char *buffer, int row, int column);
 
 bool is_sensor_released();
 bool is_mode_selected();
-bool is_sensor_pressed();
 bool is_game_finished();
 
 // Maquina de estados
@@ -102,7 +101,6 @@ enum Event
 };
 
 typedef void (*T_transition)(void);
-//
 
 enum ShockIntensity
 {
@@ -146,7 +144,6 @@ int n_key_pressed;		  // cantidad de keys que se presionaron en el keypad
 int number_of_attempts;	  // cantidad de intentos que lleva el usuario con el keypad_game
 int max_keypad_game_time; // cantidad maxima de tiempo que va a tener el numero random para estar en el lcd en milisegundos ( lo pongo como variable para poder modificarlo )
 
-bool playing; // indica si el usuario esta jugando a alguno de los modos disponibles
 bool positive;
 bool clear_lcd;		// para indicar si es necesario limpiar el lcd o no
 bool electrocuting; // para indicar si se esta electrocutando al usuario o no
@@ -188,7 +185,7 @@ en teoria deberia salir cada que termine sus validaciones y vuelva a preguntar e
 */
 
 // obtiene los nuevos eventos por orden de prioridad
-void get_new_event(void)
+void get_new_event()
 {
 	get_event_timer.finish_time = millis();
 
@@ -255,7 +252,7 @@ void loop()
 }
 
 // Procesamiento de estados
-void fsm(void)
+void fsm()
 {
 	get_new_event();
 
@@ -269,13 +266,13 @@ void fsm(void)
 }
 
 // Funcion DUMMY
-void none(void)
+void none()
 {
 	// No hace nada
 }
 
 // Reinicia las variables
-void init_(void)
+void init_()
 {
 	current_state = STATE_INIT;
 
@@ -283,22 +280,25 @@ void init_(void)
 	button_points = 0;
 	keypad_points = 0;
 	number_of_attempts = 0;
+
 	positive = true;
 	keypad_reset = true;
-	playing = false;
+
 	clear_lcd = false;
 	electrocuting = false;
 	sound_playing = false;
-	speed = MAX_TIME_SERVO;
 	print_sensor_message = true;
 	print_game_mode_message = true;
+
+	speed = MAX_TIME_SERVO;
 	intensity = ShockIntensity::SHOCK_LEVEL_LOW; // por defecto arrancamos con una intensidad baja
-	digitalWrite(LED_PIN, 0);
+
+	digitalWrite(LED_PIN, SHOCK_INTENSITY_CERO);
 	noTone(BUZZER_PIN);
 }
 
 // Pone al dispositivo en punto muerto
-void error(void)
+void error()
 {
 	init_();
 	current_state = STATE_UNKNOWN;
@@ -308,8 +308,11 @@ void error(void)
 void sensor_wait()
 {
 	current_state = STATE_SENSOR_WAIT;
-
+	
+	// Limpia pantalla de seleccion de modo
 	clear_serial();
+	// Corta el buzzer, ya que pudo haberse interrumpido el modo de button_game
+	noTone(BUZZER_PIN);
 
 	if (print_sensor_message)
 	{
