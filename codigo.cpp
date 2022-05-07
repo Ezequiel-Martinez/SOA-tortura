@@ -287,7 +287,7 @@ void init_(void)
 	sound_playing = false;
 	speed = MAX_TIME_SERVO;
 	print_sensor_message = true;
-	print_game_mode_message = true;
+	print_game_mode_message = false;
 	intensity = ShockIntensity::SHOCK_LEVEL_LOW; // por defecto arrancamos con una intensidad baja
 	digitalWrite(LED_PIN, 0);
 	noTone(BUZZER_PIN);
@@ -304,7 +304,7 @@ void error(void)
 // Espera a que se presione el sensor
 void sensor_wait(void)
 {
-	current_state = STATE_WAIT_MODE;
+	current_state = STATE_SENSOR_WAIT;
 
 	clear_serial();
 
