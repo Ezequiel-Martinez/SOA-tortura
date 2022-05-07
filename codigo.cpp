@@ -291,7 +291,7 @@ void init_(void)
 	sound_playing = false;
 	speed = MAX_TIME_SERVO;
 	print_sensor_message = true;
-	print_game_mode_message = false;
+	print_game_mode_message = true;
 	intensity = ShockIntensity::SHOCK_LEVEL_LOW; // por defecto arrancamos con una intensidad baja
 	digitalWrite(LED_PIN, 0);
 	noTone(BUZZER_PIN);
