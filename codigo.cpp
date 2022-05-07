@@ -310,8 +310,6 @@ void sensor_wait(void)
 
 	if (print_sensor_message)
 	{
-		current_event = EVENT_CONT;
-		current_state = STATE_INIT;
 		print_sensor_message = false;
 		print_game_mode_message = true;
 		print_string_on_lcd("Presione sensor.", 0, 0);
