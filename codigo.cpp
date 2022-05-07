@@ -200,9 +200,12 @@ void get_new_event(void)
 		{
 			return;
 		}
+
+		current_event = EVENT_SENSOR_PRESSED;
+		return;
 	}
 
-	current_event = EVENT_SENSOR_PRESSED;
+	current_event = EVENT_CONT;
 }
 
 // Carga el reconocimiento de pines
@@ -218,7 +221,7 @@ void setup()
 
 	// Servo
 	servo_degrees = 0;
-	servo_motor.attach(SERVO_PIN,MIN_SERVO_PULSE_WIDTH,MAX_SERVO_PULSE_WIDTH);
+	servo_motor.attach(SERVO_PIN, MIN_SERVO_PULSE_WIDTH, MAX_SERVO_PULSE_WIDTH);
 	servo_motor.write(servo_degrees);
 
 	// Led
@@ -367,7 +370,7 @@ void button_game(void)
 	buzzer_timer.start_time = buzzer_timer.finish_time;
 
 	// Compara el ultimo caracter del numero generado con 1 (50% de chance)
-	if (random(MIN_BUTTON_GAME_RANDOM_VALUE,MAX_BUTTON_GAME_RANDOM_VALUE) & 1)
+	if (random(MIN_BUTTON_GAME_RANDOM_VALUE, MAX_BUTTON_GAME_RANDOM_VALUE) & 1)
 	{
 		if (!sound_playing)
 		{
@@ -706,16 +709,16 @@ void generate_random_number(char *buffer)
 {
 	int i = 0;
 
-	*(buffer + i++) = random(ASCII_NUMBER_ONE,ASCII_NUMBER_NINE);
-	*(buffer + i++) = random(ASCII_NUMBER_ONE,ASCII_NUMBER_NINE);
-	*(buffer + i++) = random(ASCII_NUMBER_ONE,ASCII_NUMBER_NINE);
-	*(buffer + i++) = random(ASCII_NUMBER_ONE,ASCII_NUMBER_NINE);
-	*(buffer + i++) = random(ASCII_NUMBER_ONE,ASCII_NUMBER_NINE);
-	*(buffer + i++) = random(ASCII_NUMBER_ONE,ASCII_NUMBER_NINE);
-	*(buffer + i++) = random(ASCII_NUMBER_ONE,ASCII_NUMBER_NINE);
-	*(buffer + i++) = random(ASCII_NUMBER_ONE,ASCII_NUMBER_NINE);
-	*(buffer + i++) = random(ASCII_NUMBER_ONE,ASCII_NUMBER_NINE);
-	*(buffer + i++) = random(ASCII_NUMBER_ONE,ASCII_NUMBER_NINE);
+	*(buffer + i++) = random(ASCII_NUMBER_ONE, ASCII_NUMBER_NINE);
+	*(buffer + i++) = random(ASCII_NUMBER_ONE, ASCII_NUMBER_NINE);
+	*(buffer + i++) = random(ASCII_NUMBER_ONE, ASCII_NUMBER_NINE);
+	*(buffer + i++) = random(ASCII_NUMBER_ONE, ASCII_NUMBER_NINE);
+	*(buffer + i++) = random(ASCII_NUMBER_ONE, ASCII_NUMBER_NINE);
+	*(buffer + i++) = random(ASCII_NUMBER_ONE, ASCII_NUMBER_NINE);
+	*(buffer + i++) = random(ASCII_NUMBER_ONE, ASCII_NUMBER_NINE);
+	*(buffer + i++) = random(ASCII_NUMBER_ONE, ASCII_NUMBER_NINE);
+	*(buffer + i++) = random(ASCII_NUMBER_ONE, ASCII_NUMBER_NINE);
+	*(buffer + i++) = random(ASCII_NUMBER_ONE, ASCII_NUMBER_NINE);
 	*(buffer + RANDOM_NUM_LENGTH - 1) = '\0';
 
 #if DEBUG_MODE
