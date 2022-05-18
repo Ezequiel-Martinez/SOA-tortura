@@ -671,7 +671,7 @@ bool is_mode_selected()
 
 #if DEBUG_MODE
 		Serial.print("Se recibio por Serial Monitor el caracter: ");
-		Serial.println(() incoming_byte);
+		Serial.println(incoming_byte);
 #endif
 
 		switch (incoming_byte)
@@ -698,7 +698,9 @@ bool is_mode_selected()
 #endif
 			break;
 		default:
-			current_event = EV_UNKNOWK;
+			clear_serial();
+
+			return false;
 
 #if DEBUG_MODE
 			Serial.println("El comando ingresado es invalido");
