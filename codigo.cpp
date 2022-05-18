@@ -79,6 +79,7 @@ void generate_random_number(char *buffer);
 void print_string_on_lcd(const char *buffer, int row, int column);
 
 bool is_key_pressed();
+bool button_required();
 bool is_mode_selected();
 bool is_game_finished();
 bool is_sensor_released();
@@ -163,16 +164,18 @@ bool sound_playing; // para indicar si el buzzer esta reproduciendo un sonido o 
 bool print_sensor_message;
 bool print_game_mode_message;
 bool keypad_reset;
+bool button_start;
 
-char random_number_buffer[RANDOM_NUM_LENGTH];	// buffer para almacenar el numero random generado en forma de string
-char key_map[NUM_ROWS_KEYPAD][NUM_COLS_KEYPAD]; // mapa de teclas que vamos a usar del keypad
+char random_number_buffer[RANDOM_NUM_LENGTH];														  // buffer para almacenar el numero random generado en forma de string
+char key_map[NUM_ROWS_KEYPAD][NUM_COLS_KEYPAD] = {{'1', '2', '3'}, {'4', '5', '6'}, {'7', '8', '9'}}; // mapa de teclas que vamos a usar del keypad
 char key;
 
-byte row_pins[NUM_ROWS_KEYPAD];
-byte col_pins[NUM_COLS_KEYPAD];
+byte row_pins[NUM_ROWS_KEYPAD] = {A2, A1, A0}; // pines a los cuales conectamos las filas del keypad
+byte col_pins[NUM_COLS_KEYPAD] = {13, 12, 11}; // pines a los cuales conectamos las columnas del keypad
 
 // creamos la variable del keypad
-Keypad keypad;
+Keypad keypad = Keypad(makeKeymap(key_map), row_pins, col_pins, NUM_ROWS_KEYPAD, NUM_COLS_KEYPAD);
+;
 
 /* Matriz de maquina de estados
 EV_CONT, 	EV_SEN_PRE,		EV_SEN_REL, 	EV_CHAR_B, 		EV_CHAR_K, 		EV_CHAR_N, 		EV_KEY_PRE, 	EV_BUT_PRE, 	EV_BUT_NPRE, 	EV_WIN, EV_UNKNOWK
@@ -204,7 +207,7 @@ void get_new_event()
 	{
 		get_event_timer.start_time = get_event_timer.finish_time;
 
-		if (is_sensor_released() == true || is_mode_selected() == true || is_game_finished() == true || is_key_pressed() == true || button_required == true)
+		if (is_sensor_released() == true || is_mode_selected() == true || is_game_finished() == true || is_key_pressed() == true || button_required() == true)
 		{
 			return;
 		}
@@ -240,11 +243,7 @@ void setup()
 	print_sensor_message = true; // Dejar esto aca
 
 	// Keypad
-	key_map = {{'1', '2', '3'}, {'4', '5', '6'}, {'7', '8', '9'}}; // mapa de teclas que vamos a usar del keypad
-	row_pins = {A2, A1, A0};									   // pines a los cuales conectamos las filas del keypad
-	col_pins = {13, 12, 11};									   // pines a los cuales conectamos las columnas del keypad
 	max_keypad_game_time = MAX_KEYPAD_GAME_TIME;
-	keypad = Keypad(makeKeymap(key_map), row_pins, col_pins, NUM_ROWS_KEYPAD, NUM_COLS_KEYPAD);
 	pinMode(A0, INPUT); // pin que usamos para declarar la variable keypad
 	pinMode(A1, INPUT); // pin que usamos para declarar la variable keypad
 	pinMode(A2, INPUT); // pin que usamos para declarar la variable keypad
@@ -292,12 +291,14 @@ void init_()
 	current_state = ST_INIT;
 
 	n_key_pressed = 0;
+	button_state = 0;
 	button_points = 0;
 	keypad_points = 0;
 	number_of_attempts = 0;
 
 	positive = true;
 	keypad_reset = true;
+	button_start = true;
 
 	clear_lcd = false;
 	electrocuting = false;
@@ -322,7 +323,10 @@ void error()
 // Reset rapido por interrupcion de game_modes
 void quick_reset()
 {
+	button_state = 0;
+
 	keypad_reset = true;
+	button_start = true;
 
 	electrocuting = false;
 	sound_playing = false;
@@ -412,6 +416,11 @@ void button_processing()
 void button_game()
 {
 	current_state = ST_BUTTON;
+	if (button_start)
+	{
+		print_string_on_lcd("Usando buzzer", 0, 0);
+		button_start = false;
+	}
 
 	button_processing();
 }
@@ -521,45 +530,56 @@ void turn_off_buzzer()
 // Funcion que se procesar puntos del buzzer game
 void button_success()
 {
-	turn_off_buzzer();
-
-	if (button_state == HIGH)
+	if ((tone_timer.finish_time = millis()) - tone_timer.start_time >= MAX_BUTTON_PRESS_DELAY)
 	{
+		turn_off_buzzer();
+
+		if (button_state == HIGH)
+		{
 #if DEBUG_MODE
-		Serial.println("Boton apretado a tiempo");
+			Serial.println("Boton apretado a tiempo");
 #endif
 
-		button_points++;
-		return;
+			button_points++;
+			button_state = 0;
+			return;
+		}
 	}
 }
 
 // Funcion que se procesar derrota del buzzer game
 void button_fail()
 {
-	turn_off_buzzer();
+	if ((tone_timer.finish_time = millis()) - tone_timer.start_time >= MAX_BUTTON_PRESS_DELAY)
+	{
+		turn_off_buzzer();
 
 #if DEBUG_MODE
-	Serial.println("Demasiado lento apretando el boton");
+		Serial.println("Demasiado lento apretando el boton");
 #endif
 
-	button_points = 0;
-	electrocuting = true;
-	shock_timer.start_time = millis();
-	modify_electric_shock(true);
+		button_state = 0;
+		button_points = 0;
+		electrocuting = true;
+		shock_timer.start_time = millis();
+		modify_electric_shock(true);
+	}
 }
 
 // Funcion que retorna true cuando se acabe el tiempo para presionar el boton
 bool button_required()
 {
-	if ((tone_timer.finish_time = millis()) - tone_timer.start_time >= MAX_BUTTON_PRESS_DELAY)
+	if (sound_playing)
 	{
-		button_state = digitalRead(BUTTON_PIN);
-
-		if (button_state == HIGH)
+		if (button_state == HIGH || (button_state = digitalRead(BUTTON_PIN)) == HIGH)
+		{
+			button_state = HIGH;
 			current_event = EV_BUT_PRE;
+		}
 		else
+		{
 			current_event = EV_BUT_NPRE;
+		}
 
 		return true;
 	}
@@ -651,7 +671,7 @@ bool is_mode_selected()
 
 #if DEBUG_MODE
 		Serial.print("Se recibio por Serial Monitor el caracter: ");
-		Serial.println((char)incoming_byte);
+		Serial.println(() incoming_byte);
 #endif
 
 		switch (incoming_byte)
