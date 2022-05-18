@@ -59,6 +59,7 @@ void init_();
 void error();
 void servo();
 void wait_mode();
+void button_fail();
 void quick_reset();
 void sensor_wait();
 void button_game();
@@ -66,39 +67,48 @@ void keypad_game();
 void normal_game();
 void clear_serial();
 void get_new_event();
+void key_processing();
+void button_success();
+void turn_off_buzzer();
 void buzzer_processing();
+void button_processing();
+void keypad_processing();
 
 void modify_electric_shock(bool mode);
 void generate_random_number(char *buffer);
 void print_string_on_lcd(const char *buffer, int row, int column);
 
-bool is_sensor_released();
+bool is_key_pressed();
 bool is_mode_selected();
 bool is_game_finished();
+bool is_sensor_released();
 
 // Maquina de estados
 enum State
 {
-	STATE_INIT,
-	STATE_SENSOR_WAIT,
-	STATE_WAIT_MODE,
-	STATE_BUTTON_GAME,
-	STATE_KEYPAD_GAME,
-	STATE_NORMAL_GAME,
-	STATE_UNKNOWN,
-	NUMBER_OF_STATES
+	ST_INIT,
+	ST_SEN,
+	ST_WAIT,
+	ST_BUTTON,
+	ST_KEYPAD,
+	ST_NORMAL,
+	ST_UNKNOWN,
+	NUM_ST
 };
 enum Event
 {
-	EVENT_CONT,
-	EVENT_SENSOR_PRESSED,
-	EVENT_SENSOR_RELEASED,
-	EVENT_CHARACTER_B,
-	EVENT_CHARACTER_K,
-	EVENT_CHARACTER_N,
-	EVENT_WIN,
-	EVENT_UNKNOWK,
-	NUMBER_OF_EVENTS
+	EV_CONT,
+	EV_SEN_PRE,
+	EV_SEN_REL,
+	EV_CHAR_B,
+	EV_CHAR_K,
+	EV_CHAR_N,
+	EV_KEY_PRE,
+	EV_BUT_PRE,
+	EV_BUT_NPRE,
+	EV_WIN,
+	EV_UNKNOWK,
+	NUM_EV
 };
 
 typedef void (*T_transition)(void);
@@ -138,6 +148,7 @@ Servo servo_motor;
 LiquidCrystal lcd(4, 5, 6, 7, 8, 9); // los parametros son los pines a los cuales esta conectado el lcd
 
 int speed;
+int button_state;
 int button_points; // cantidad de puntos que llevo hasta el momento
 int keypad_points; // cantidad de puntos que llevo hasta el momento
 int servo_degrees;
@@ -153,37 +164,36 @@ bool print_sensor_message;
 bool print_game_mode_message;
 bool keypad_reset;
 
-char random_number_buffer[RANDOM_NUM_LENGTH];														  // buffer para almacenar el numero random generado en forma de string
-char key_map[NUM_ROWS_KEYPAD][NUM_COLS_KEYPAD] = {{'1', '2', '3'}, {'4', '5', '6'}, {'7', '8', '9'}}; // mapa de teclas que vamos a usar del keypad
+char random_number_buffer[RANDOM_NUM_LENGTH];	// buffer para almacenar el numero random generado en forma de string
+char key_map[NUM_ROWS_KEYPAD][NUM_COLS_KEYPAD]; // mapa de teclas que vamos a usar del keypad
+char key;
 
-byte row_pins[NUM_ROWS_KEYPAD] = {A2, A1, A0}; // pines a los cuales conectamos las filas del keypad
-byte col_pins[NUM_COLS_KEYPAD] = {13, 12, 11}; // pines a los cuales conectamos las columnas del keypad
+byte row_pins[NUM_ROWS_KEYPAD];
+byte col_pins[NUM_COLS_KEYPAD];
 
 // creamos la variable del keypad
-Keypad keypad = Keypad(makeKeymap(key_map), row_pins, col_pins, NUM_ROWS_KEYPAD, NUM_COLS_KEYPAD);
+Keypad keypad;
 
-T_transition state_table[NUMBER_OF_STATES][NUMBER_OF_EVENTS] =
-	{
-		// EVENT_CONT, EVENT_SENSOR_PRESSED, EVENT_SENSOR_RELEASED, EVENT_CHARACTER_B, EVENT_CHARACTER_K, EVENT_CHARACTER_N, EVENT_WIN, EVENT_UNKNOWK
-		init_, 		   wait_mode, 			 sensor_wait, 			error, 			   error, 			  error, 			 error, 	error, // STATE_INIT
-		none, 		   wait_mode, 			 sensor_wait, 			none, 			   none, 			  none, 			 error, 	error, // STATE_SENSOR_WAIT
-		none, 		   wait_mode, 			 sensor_wait, 			button_game, 	   keypad_game, 	  normal_game, 		 error, 	error, // STATE_WAIT_MODE
-		none, 		   button_game, 		 sensor_wait, 			none, 			   none, 			  none, 			 init_, 	error, // STATE_BUTTON_GAME
-		none, 		   keypad_game, 		 sensor_wait, 			none, 			   none, 			  none, 			 init_, 	error, // STATE_KEYPAD_GAME
-		none, 		   normal_game, 		 sensor_wait, 			none, 			   none, 			  none, 			 init_, 	error, // STATE_NORMAL_GAME
-		error, 		   error, 				 error, 		 		error, 			   error, 			  error, 			 error, 	error, // STATE_UNKNOWN
-};
-
-/*De esta forma queda mas facil de leer y cada juego tiene su estado, de forma que evitamos switches engorrosos
-
-- init_ es el setup
-- none la funcion de no hacer nada, un return
-- wait_mode es la funcion que espera que se ingrese el modo de juego
-- sensor_wait es la funcion que espera a que se presione el sensor
-- button_game, keypad_game y norma_game son las funciones de cada juego. queda pendiente revisar la logica.
-en teoria deberia salir cada que termine sus validaciones y vuelva a preguntar estados
-- error es un estado en que el sistema se frena, por lo que no vamos a tocarlo por ahora
+/* Matriz de maquina de estados
+EV_CONT, 	EV_SEN_PRE,		EV_SEN_REL, 	EV_CHAR_B, 		EV_CHAR_K, 		EV_CHAR_N, 		EV_KEY_PRE, 	EV_BUT_PRE, 	EV_BUT_NPRE, 	EV_WIN, EV_UNKNOWK
+init_, 		wait_mode, 		sensor_wait, 	none, 			none, 			none, 			none, 			none,			none,			error, 	error,		ST_INIT
+none, 		wait_mode, 		sensor_wait, 	none, 			none, 			none, 			none, 			none,			none,			error, 	error,		ST_SEN
+none,		wait_mode, 		sensor_wait, 	button_game,	keypad_game,	normal_game,	none, 			none,			none,			error, 	error, 		ST_WAIT
+none, 		button_game, 	sensor_wait, 	none, 			none, 			none, 			none, 			button_success,	button_fail,	init_, 	error,		ST_BUTTON
+none, 		keypad_game, 	sensor_wait, 	none, 			none, 			none, 			key_processing, none,			none,			init_, 	error,		ST_KEYPAD
+none, 		normal_game, 	sensor_wait, 	none, 			none, 			none, 			key_processing, button_success,	button_fail,	init_,	error,		ST_NORMAL
+error, 		error, 			error, 			error, 			error, 			error, 			error, 			none,			none,			error, 	error,		ST_UNKNOWN
 */
+T_transition state_table[NUM_ST][NUM_EV] =
+	{
+		init_, wait_mode, sensor_wait, none, none, none, none, none, none, error, error,
+		none, wait_mode, sensor_wait, none, none, none, none, none, none, error, error,
+		none, wait_mode, sensor_wait, button_game, keypad_game, normal_game, none, none, none, error, error,
+		none, button_game, sensor_wait, none, none, none, none, button_success, button_fail, init_, error,
+		none, keypad_game, sensor_wait, none, none, none, key_processing, none, none, init_, error,
+		none, normal_game, sensor_wait, none, none, none, key_processing, button_success, button_fail, init_, error,
+		error, error, error, error, error, error, error, none, none, error, error, //
+};
 
 // obtiene los nuevos eventos por orden de prioridad
 void get_new_event()
@@ -194,16 +204,16 @@ void get_new_event()
 	{
 		get_event_timer.start_time = get_event_timer.finish_time;
 
-		if (is_sensor_released() == true || is_mode_selected() == true || is_game_finished() == true)
+		if (is_sensor_released() == true || is_mode_selected() == true || is_game_finished() == true || is_key_pressed() == true || button_required == true)
 		{
 			return;
 		}
 
-		current_event = EVENT_SENSOR_PRESSED;
+		current_event = EV_SEN_PRE;
 		return;
 	}
 
-	current_event = EVENT_CONT;
+	current_event = EV_CONT;
 }
 
 // Carga el reconocimiento de pines
@@ -230,7 +240,11 @@ void setup()
 	print_sensor_message = true; // Dejar esto aca
 
 	// Keypad
+	key_map = {{'1', '2', '3'}, {'4', '5', '6'}, {'7', '8', '9'}}; // mapa de teclas que vamos a usar del keypad
+	row_pins = {A2, A1, A0};									   // pines a los cuales conectamos las filas del keypad
+	col_pins = {13, 12, 11};									   // pines a los cuales conectamos las columnas del keypad
 	max_keypad_game_time = MAX_KEYPAD_GAME_TIME;
+	keypad = Keypad(makeKeymap(key_map), row_pins, col_pins, NUM_ROWS_KEYPAD, NUM_COLS_KEYPAD);
 	pinMode(A0, INPUT); // pin que usamos para declarar la variable keypad
 	pinMode(A1, INPUT); // pin que usamos para declarar la variable keypad
 	pinMode(A2, INPUT); // pin que usamos para declarar la variable keypad
@@ -240,8 +254,8 @@ void setup()
 	get_event_timer.start_time = millis();
 
 	// State machine
-	current_event = EVENT_CONT;
-	current_state = STATE_INIT;
+	current_event = EV_CONT;
+	current_state = ST_INIT;
 
 	randomSeed(analogRead(A5)); // seteamos un seed para el generador random
 }
@@ -257,13 +271,13 @@ void fsm()
 {
 	get_new_event();
 
-	if (current_event >= 0 && current_event < NUMBER_OF_EVENTS && current_state >= 0 && current_state < NUMBER_OF_STATES)
+	if (current_event >= 0 && current_event < NUM_EV && current_state >= 0 && current_state < NUM_ST)
 	{
 		state_table[current_state][current_event]();
 		return;
 	}
 
-	state_table[STATE_UNKNOWN][EVENT_UNKNOWK](); // si llega a ocurrir algun error queda siempre aca
+	state_table[ST_UNKNOWN][EV_UNKNOWK](); // si llega a ocurrir algun error queda siempre aca
 }
 
 // Funcion DUMMY
@@ -275,7 +289,7 @@ void none()
 // Reinicia las variables
 void init_()
 {
-	current_state = STATE_INIT;
+	current_state = ST_INIT;
 
 	n_key_pressed = 0;
 	button_points = 0;
@@ -302,7 +316,7 @@ void init_()
 void error()
 {
 	init_();
-	current_state = STATE_UNKNOWN;
+	current_state = ST_UNKNOWN;
 }
 
 // Reset rapido por interrupcion de game_modes
@@ -312,7 +326,7 @@ void quick_reset()
 
 	electrocuting = false;
 	sound_playing = false;
-	
+
 	speed = MAX_TIME_SERVO;
 	intensity = ShockIntensity::SHOCK_LEVEL_LOW; // por defecto arrancamos con una intensidad baja
 
@@ -324,8 +338,8 @@ void quick_reset()
 // Espera a que se presione el sensor
 void sensor_wait()
 {
-	current_state = STATE_SENSOR_WAIT;
-	
+	current_state = ST_SEN;
+
 	quick_reset();
 
 	if (print_sensor_message)
@@ -343,7 +357,7 @@ void sensor_wait()
 // Espera el modo de juego
 void wait_mode()
 {
-	current_state = STATE_WAIT_MODE;
+	current_state = ST_WAIT;
 
 	if (print_game_mode_message)
 	{
@@ -358,13 +372,8 @@ void wait_mode()
 }
 
 // Funcion que se encarga de todo lo relacionado al juego del boton
-void button_game()
+void button_processing()
 {
-	if (current_state != STATE_NORMAL_GAME)
-	{
-		current_state = STATE_BUTTON_GAME;
-	}
-
 	shock_timer.finish_time = buzzer_timer.finish_time = millis();
 
 	if (electrocuting)
@@ -387,33 +396,29 @@ void button_game()
 	buzzer_timer.start_time = buzzer_timer.finish_time;
 
 	// Compara el ultimo caracter del numero generado con 1 (50% de chance)
-	if (random(MIN_BUTTON_GAME_RANDOM_VALUE, MAX_BUTTON_GAME_RANDOM_VALUE) & 1)
+	if (!sound_playing && random(MIN_BUTTON_GAME_RANDOM_VALUE, MAX_BUTTON_GAME_RANDOM_VALUE) & 1)
 	{
-		if (!sound_playing)
-		{
 #if DEBUG_MODE
-			Serial.println("Apreta el boton");
+		Serial.println("Apreta el boton");
 #endif
 
-			sound_playing = true;
-			tone(BUZZER_PIN, TONE_FREQUENCY);
-			tone_timer.start_time = millis();
-		}
-
-		buzzer_processing();
+		sound_playing = true;
+		tone(BUZZER_PIN, TONE_FREQUENCY);
+		tone_timer.start_time = millis();
 	}
 }
 
-// Funcion que se encarga de todo lo relacionado al juego del keypad
-void keypad_game()
+// Funcion que activa, solamente, el juego del boton
+void button_game()
 {
-	char key;
+	current_state = ST_BUTTON;
 
-	if (current_state != STATE_NORMAL_GAME)
-	{
-		current_state = STATE_KEYPAD_GAME;
-	}
+	button_processing();
+}
 
+// Funcion que se encarga de todo lo relacionado al juego del keypad
+void keypad_processing()
+{
 	if (keypad_reset)
 	{
 		keypad_reset = false;
@@ -432,17 +437,11 @@ void keypad_game()
 		print_string_on_lcd("", 0, 0);
 		lcd_clear_timer.start_time = lcd_clear_timer.finish_time;
 	}
+}
 
-	if ((key = keypad.getKey()) == NO_KEY)
-	{
-		return;
-	}
-
-#if DEBUG_MODE
-	Serial.print("Tecla presionada: ");
-	Serial.println(key);
-#endif
-
+// Funcion que procesa la tecla presionada
+void key_processing()
+{
 	if (key != *(random_number_buffer + n_key_pressed))
 	{
 #if DEBUG_MODE
@@ -494,50 +493,78 @@ void keypad_game()
 	}
 }
 
+// Funcion que activa, solamente, el juego del keypad
+void keypad_game()
+{
+	current_state = ST_KEYPAD;
+
+	keypad_processing();
+}
+
 // Funcion que ejecuta ambos juegos
 void normal_game()
 {
-	if (current_state != STATE_NORMAL_GAME)
-	{
-		current_state = STATE_NORMAL_GAME;
-	}
+	current_state = ST_NORMAL;
 
-	button_game();
-	keypad_game();
+	button_processing();
+	keypad_processing();
 }
 
-// Funcion que se encarga de procesar el buzzer asociado con el juego del boton
-void buzzer_processing()
+// Funcion que apaga el buzzer
+void turn_off_buzzer()
 {
-	int button_state;
+	noTone(BUZZER_PIN);
+	sound_playing = false;
+	tone_timer.start_time = tone_timer.finish_time;
+}
 
+// Funcion que se procesar puntos del buzzer game
+void button_success()
+{
+	turn_off_buzzer();
+
+	if (button_state == HIGH)
+	{
+#if DEBUG_MODE
+		Serial.println("Boton apretado a tiempo");
+#endif
+
+		button_points++;
+		return;
+	}
+}
+
+// Funcion que se procesar derrota del buzzer game
+void button_fail()
+{
+	turn_off_buzzer();
+
+#if DEBUG_MODE
+	Serial.println("Demasiado lento apretando el boton");
+#endif
+
+	button_points = 0;
+	electrocuting = true;
+	shock_timer.start_time = millis();
+	modify_electric_shock(true);
+}
+
+// Funcion que retorna true cuando se acabe el tiempo para presionar el boton
+bool button_required()
+{
 	if ((tone_timer.finish_time = millis()) - tone_timer.start_time >= MAX_BUTTON_PRESS_DELAY)
 	{
 		button_state = digitalRead(BUTTON_PIN);
 
-		noTone(BUZZER_PIN);
-		sound_playing = false;
-		tone_timer.start_time = tone_timer.finish_time;
-
 		if (button_state == HIGH)
-		{
-#if DEBUG_MODE
-			Serial.println("Boton apretado a tiempo");
-#endif
+			current_event = EV_BUT_PRE;
+		else
+			current_event = EV_BUT_NPRE;
 
-			button_points++;
-			return;
-		}
-
-#if DEBUG_MODE
-		Serial.println("Demasiado lento apretando el boton");
-#endif
-
-		button_points = 0;
-		electrocuting = true;
-		shock_timer.start_time = millis();
-		modify_electric_shock(true);
+		return true;
 	}
+
+	return false;
 }
 
 // Funcion que limpia el contenido de la consola
@@ -585,12 +612,29 @@ void servo()
 	}
 }
 
-// Funcion que retorna true si el sensor no esta presionado correctamente, de lo contrario retorna false
+// Funcion que retorna true si se presiona una tecla
+bool is_key_pressed()
+{
+	if ((key = keypad.getKey()) != NO_KEY)
+	{
+#if DEBUG_MODE
+		Serial.print("Tecla presionada: ");
+		Serial.println(key);
+#endif
+
+		current_event = EV_KEY_PRE;
+		return true;
+	}
+
+	return false;
+}
+
+// Funcion que retorna true si el sensor no esta presionado correctamente
 bool is_sensor_released()
 {
 	if (!(analogRead(SENSOR_PIN) > MIN_SENSOR_PRESSURE))
 	{
-		current_event = EVENT_SENSOR_RELEASED;
+		current_event = EV_SEN_REL;
 		return true;
 	}
 
@@ -613,29 +657,28 @@ bool is_mode_selected()
 		switch (incoming_byte)
 		{
 		case SerialMonitorCommands::BUTTON: // Paso por Serial Monitor para usar solamente el buzzer y el boton
-			current_event = EVENT_CHARACTER_B;
-			print_string_on_lcd("Usando buzzer", 0, 0);
+			current_event = EV_CHAR_B;
 
 #if DEBUG_MODE
 			Serial.println("Modo de juego: buzzer - boton");
 #endif
 			break;
 		case SerialMonitorCommands::KEYPAD: // Paso por Serial Monitor para usar solamente el Keypad
-			current_event = EVENT_CHARACTER_K;
+			current_event = EV_CHAR_K;
 
 #if DEBUG_MODE
 			Serial.println("Modo de juego: keypad");
 #endif
 			break;
 		case SerialMonitorCommands::NORMAL: // Paso por Serial Monitor el funcionamiento normal (buzzer, boton y keypad)
-			current_event = EVENT_CHARACTER_N;
+			current_event = EV_CHAR_N;
 
 #if DEBUG_MODE
 			Serial.println("Modo de juego: buzzer - boton - keypad");
 #endif
 			break;
 		default:
-			current_event = EVENT_UNKNOWK;
+			current_event = EV_UNKNOWK;
 
 #if DEBUG_MODE
 			Serial.println("El comando ingresado es invalido");
@@ -655,23 +698,23 @@ bool is_mode_selected()
 bool is_game_finished()
 {
 	// Para modo normal o boton
-	if ((current_state == STATE_BUTTON_GAME || current_state == STATE_NORMAL_GAME) && button_points == BUTTON_POINTS_TO_WIN)
+	if ((current_state == ST_BUTTON || current_state == ST_NORMAL) && button_points == BUTTON_POINTS_TO_WIN)
 	{
 #if DEBUG_MODE
 		Serial.println("Ganaste el juego del boton");
 #endif
-		current_event = EVENT_WIN;
+		current_event = EV_WIN;
 
 		return true;
 	}
 
 	// Para modo normal o keypad
-	if ((current_state == STATE_KEYPAD_GAME || current_state == STATE_NORMAL_GAME) && keypad_points == KEYPAD_POINTS_TO_WIN)
+	if ((current_state == ST_KEYPAD || current_state == ST_NORMAL) && keypad_points == KEYPAD_POINTS_TO_WIN)
 	{
 #if DEBUG_MODE
 		Serial.println("Ganaste el juego del keypad");
 #endif
-		current_event = EVENT_WIN;
+		current_event = EV_WIN;
 
 		return true;
 	}
