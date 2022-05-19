@@ -276,7 +276,7 @@ void fsm()
 		return;
 	}
 
-	state_table[ST_UNKNOWN][EV_UNKNOWK](); // si llega a ocurrir algun error queda siempre aca
+	state_table[ST_UNKNOWN][EV_UNKNOWN](); // si llega a ocurrir algun error queda siempre aca
 }
 
 // Funcion DUMMY
