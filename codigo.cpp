@@ -108,7 +108,7 @@ enum Event
 	EV_BUT_PRE,
 	EV_BUT_NPRE,
 	EV_WIN,
-	EV_UNKNOWK,
+	EV_UNKNOWN,
 	NUM_EV
 };
 
@@ -664,7 +664,7 @@ bool is_sensor_released()
 // Procesa el byte cargado en consola
 bool is_mode_selected()
 {
-	int incoming_byte = 0;
+	char incoming_byte = 0;
 
 	if ((incoming_byte = Serial.read()) > 0) // Lo lee en ascii, si ingreso la letra "a", entonces se recibe el número 97
 	{
